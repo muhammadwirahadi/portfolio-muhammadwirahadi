@@ -64,6 +64,10 @@ function App() {
   const aboutAnimCompleted = useRef(false)
   const isLockedDown = useRef(false)
   const lenisRef = useRef(null)
+  // Penanda sedang ada navigasi dari navbar. Selama true, callback onBack milik
+  // transisi (yang menggeser scroll sendiri saat mundur) diabaikan supaya tidak
+  // "menyeret" user keluar dari section tujuan.
+  const isNavigatingRef = useRef(false)
 
   const handleAboutAnimComplete = () => {
     aboutAnimCompleted.current = true
@@ -79,7 +83,7 @@ function App() {
 
   const handleScrollBackToAbout = () => {
     if (lenisRef.current) {
-      lenisRef.current.scrollTo('#next-journey', { duration: 3.0 })
+      if (!isNavigatingRef.current) lenisRef.current.scrollTo('#next-journey', { duration: 3.0 })
     }
   }
 
@@ -91,7 +95,7 @@ function App() {
 
   const handleScrollBackToExperiences = () => {
     if (lenisRef.current) {
-      lenisRef.current.scrollTo('#next-journey-projects', { duration: 3.0 })
+      if (!isNavigatingRef.current) lenisRef.current.scrollTo('#next-journey-projects', { duration: 3.0 })
     }
   }
 
@@ -103,8 +107,85 @@ function App() {
 
   const handleScrollBackToSummary = () => {
     if (lenisRef.current) {
-      lenisRef.current.scrollTo('#next-journey-summary', { duration: 3.0 })
+      if (!isNavigatingRef.current) lenisRef.current.scrollTo('#next-journey-summary', { duration: 3.0 })
     }
+  }
+
+  // Ambil ScrollTrigger pin milik section transisi (id: experiences / summary / contact)
+  const getPinScrollTrigger = (sectionId) =>
+    ScrollTrigger.getAll().find((st) => st.pin && st.trigger?.id === sectionId)
+
+  // Posisi scroll "tiba" untuk tiap tujuan navbar. Dihitung dari ScrollTrigger
+  // di runtime, BUKAN hardcode, karena panjang pin spacer tergantung ukuran layar.
+  const getNavigationScrollPosition = (target) => {
+    if (target === 'about') {
+      // Titik 80% Hero = zoom selesai & About sudah tampil penuh (sama dengan titik kunci scroll)
+      const heroST = scrollTriggerRef.current
+      if (!heroST) return null
+      return Math.round(heroST.start + (heroST.end - heroST.start) * 0.80)
+    }
+
+    const sectionST = getPinScrollTrigger(target)
+    if (!sectionST) return null
+
+    // Summary hidup DI DALAM section yang di-pin, jadi tujuannya tepat di ujung
+    // pin (progress ~1). Experiences & Contact kontennya ada SETELAH pin, jadi
+    // tujuannya sedikit melewati ujung pin agar onLeave (yang memicu animasi
+    // masuk konten) pasti terpanggil.
+    return target === 'summary'
+      ? Math.round(sectionST.end) - 2
+      : Math.round(sectionST.end) + 2
+  }
+
+  // Navigasi dari Navbar / hamburger menu: fade overlay -> teleport scroll ->
+  // sinkronkan animasi scrub -> fade out. Teleport (bukan scroll animasi) dipakai
+  // karena men-scrub melewati banyak section yang di-pin bikin animasi kacau.
+  const navigateToSection = (target) => {
+    if (!introComplete || isNavigatingRef.current) return
+
+    const targetScroll = getNavigationScrollPosition(target)
+    if (targetScroll === null) return
+    // Sudah di titik tujuan - tidak perlu apa-apa
+    if (Math.abs(window.scrollY - targetScroll) < 5) return
+
+    isNavigatingRef.current = true
+    setIsResetting(true)
+
+    setTimeout(() => {
+      // Kalau tujuan ada SETELAH About, animasi masuk About dianggap selesai.
+      // Tanpa ini, kunci scroll About di Hero akan menarik balik posisi ke 80%.
+      if (target !== 'about') {
+        aboutAnimCompleted.current = true
+        isLockedDown.current = false
+        setAboutAnimCompletedState(true)
+      }
+
+      // force: true supaya tetap jalan walau Lenis sedang di-stop oleh scroll lock section
+      lenisRef.current?.scrollTo(targetScroll, { immediate: true, force: true })
+      window.scrollTo(0, targetScroll)
+      ScrollTrigger.update()
+
+      // Animasi scrub biasanya "mengejar" posisi scroll selama ~1 detik (scrub: 1).
+      // Lompat langsung ke state akhirnya supaya tidak terlihat mengejar di balik overlay.
+      ScrollTrigger.getAll().forEach((st) => {
+        if (st.animation && st.vars.scrub) {
+          st.scrubTween?.kill()
+          st.animation.progress(st.progress)
+        }
+      })
+      ScrollTrigger.update()
+
+      // Tiap tujuan mendarat di bagian paling atas kontennya: link navbar inline (bukan hamburger)
+      setNavbarScrolled(false)
+
+      setTimeout(() => {
+        setIsResetting(false)
+        // Tahan guard sampai fade-out selesai agar callback susulan tidak menggeser scroll
+        setTimeout(() => {
+          isNavigatingRef.current = false
+        }, 800)
+      }, 300)
+    }, 700)
   }
 
   const handleResetToAbout = () => {
@@ -355,7 +436,7 @@ function App() {
   return (
     <main className="bg-maroon text-cream">
       <CustomCursor light={lightTheme} />
-      <Navbar visible={navbarVisible} light={lightTheme} isScrolled={navbarScrolled} />
+      <Navbar visible={navbarVisible} light={lightTheme} isScrolled={navbarScrolled} onNavigate={navigateToSection} />
 
       {/* Secondary Fixed Cream Background - FIXED di viewport z-10 */}
       <div

@@ -150,7 +150,7 @@ export default function HoverImageReveal({
             <div
               key={i}
               onMouseEnter={() => setHovered(i)}
-              onClick={() => onItemClick?.(item, i)}
+              onClick={(e) => onItemClick?.(item, i, { x: e.clientX, y: e.clientY })}
               className="cursor-pointer"
               data-cursor-text={cursorText}
               style={{

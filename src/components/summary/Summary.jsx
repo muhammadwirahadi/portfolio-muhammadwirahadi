@@ -3,7 +3,7 @@ import gsap from 'gsap'
 import NextJourneySummary from './NextJourneySummary'
 
 // Icon tech stack - dicocokkan sama stack ASLI yang dipakai di project
-// Badilag & LSF (lihat Experiences.jsx), bukan daftar generik. Warna
+// Badilag, LSF & DMDI (lihat Experiences.jsx), bukan daftar generik. Warna
 // direcolor maroon lewat Simple Icons CDN, konsisten sama section Skills.
 const SUMMARY_STACK = [
   { slug: 'php', label: 'PHP' },
@@ -13,12 +13,19 @@ const SUMMARY_STACK = [
   { slug: 'mysql', label: 'MySQL' },
   { slug: 'git', label: 'Git' },
   { slug: 'github', label: 'GitHub' },
+  // Tambahan dari project Dewan Masjid Digital Indonesia (Next.js)
+  { slug: 'javascript', label: 'JavaScript' },
+  { slug: 'nextdotjs', label: 'Next.js' },
+  { slug: 'prisma', label: 'Prisma' },
+  { slug: 'postgresql', label: 'PostgreSQL' },
+  { slug: 'nginx', label: 'Nginx' },
+  { slug: 'githubactions', label: 'GitHub Actions' },
 ]
 
 const STATS = [
   { value: '6', label: 'Months Experience' },
   { value: '2', label: 'Internships Completed' },
-  { value: '2', label: 'Major Projects Shipped' },
+  { value: '3', label: 'Major Projects Shipped' },
 ]
 
 function Summary({ active = false, onBack, setNavbarVisible, scrollerRef, onNextJourney }) {
@@ -105,8 +112,9 @@ function Summary({ active = false, onBack, setNavbarVisible, scrollerRef, onNext
               Full Stack Developer berbasis di Jakarta, lulusan Informatika
               Universitas Bina Sarana Informatika. Enam bulan pengalaman
               hands-on membangun sistem pendaftaran magang untuk instansi
-              pemerintah dari backend di Badilag sampai full stack di
-              Lembaga Sensor Film RI.
+              pemerintah dari backend di Badan Peradilan Agama sampai full stack di
+              Lembaga Sensor Film RI, ditambah proyek freelance CMS khutbah
+              multibahasa untuk Dewan Masjid Digital Indonesia.
             </p>
 
             {/* Strip statistik ringkas - kesan "kena" tanpa perlu baca panjang */}
@@ -164,7 +172,7 @@ function Summary({ active = false, onBack, setNavbarVisible, scrollerRef, onNext
             </div>
 
             <div>
-              <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-[#4A1620]/60 mb-3">
+              <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-[#4A1620]/60 mb-2">
                 Tech Stack
               </h3>
               <div className="flex flex-wrap gap-2.5">
@@ -193,10 +201,17 @@ function Summary({ active = false, onBack, setNavbarVisible, scrollerRef, onNext
             </div>
 
             <div>
-              <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-[#4A1620]/60 mb-3">
+              <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-[#4A1620]/60 mb-2">
                 Key Accomplishments
               </h3>
               <div className="flex flex-col gap-3">
+                <div className="border-l-2 border-[#4A1620]/20 pl-4 py-0.5">
+                  <h4 className="font-bold text-sm">Dewan Masjid Digital Indonesia • Backend Developer</h4>
+                  <p className="text-xs text-[#4A1620]/75 mt-0.5">
+                    CMS khutbah Jumat ~12 bahasa dengan panel admin custom,
+                    autentikasi JWT, dan deployment otomatis ke VPS.
+                  </p>
+                </div>
                 <div className="border-l-2 border-[#4A1620]/20 pl-4 py-0.5">
                   <h4 className="font-bold text-sm">Lembaga Sensor Film RI • Fullstack Developer</h4>
                   <p className="text-xs text-[#4A1620]/75 mt-0.5">

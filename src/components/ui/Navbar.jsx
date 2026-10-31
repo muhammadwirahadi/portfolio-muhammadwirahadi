@@ -5,10 +5,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 gsap.registerPlugin(ScrollTrigger)
 
 const NAV_LINKS = [
-  { label: 'About', href: '#about' },
-  { label: 'Experiences', href: '#experiences' },
-  { label: 'Summary', href: '#summary' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'About', href: '#about', target: 'about' },
+  { label: 'Experiences', href: '#experiences', target: 'experiences' },
+  { label: 'Summary', href: '#summary', target: 'summary' },
+  { label: 'Contact', href: '#contact', target: 'contact' },
 ]
 
 function HamburgerIcon({ light = false }) {
@@ -37,10 +37,21 @@ function CloseIcon() {
   )
 }
 
-function Navbar({ visible = false, light = false, isScrolled = false }) {
+function Navbar({ visible = false, light = false, isScrolled = false, onNavigate }) {
   // Warna teks navbar dibalik ketika berada di atas background terang
   const textColorClass = light ? 'text-maroon' : 'text-cream'
   const underlineColorClass = light ? 'after:bg-maroon' : 'after:bg-cream'
+
+  // Drawer hamburger berlawanan dengan tema halaman: di halaman gelap (Hero /
+  // rasi bintang, background maroon) drawer-nya cream supaya tidak "nyaru"
+  // dengan background; di halaman terang drawer tetap maroon.
+  const drawerOnCream = !light
+  const drawerPanelClass = drawerOnCream ? 'bg-cream text-maroon border-maroon/20' : 'bg-maroon text-cream border-gold/20'
+  const drawerCloseClass = drawerOnCream ? 'text-maroon/60 hover:text-maroon' : 'text-cream/70 hover:text-cream'
+  const drawerLinkClass = drawerOnCream
+    ? 'text-maroon hover:text-maroon/60 after:bg-maroon'
+    : 'text-cream hover:text-gold after:bg-gold'
+  const drawerFooterClass = drawerOnCream ? 'text-maroon/50' : 'text-cream/40'
   const navRef = useRef(null)
   const logoRef = useRef(null)
   const logoTextRef = useRef(null)
@@ -59,6 +70,28 @@ function Navbar({ visible = false, light = false, isScrolled = false }) {
       document.body.style.overflow = ''
     }
   }, [isMenuOpen])
+
+  // Klik link navbar: jangan biarkan browser lompat ke anchor (#id), karena
+  // section-section ini di-pin & di-scrub GSAP. Navigasinya diserahkan ke App
+  // (navigateToSection) yang tahu posisi scroll tujuan yang benar.
+  const handleNavClick = (e, target) => {
+    e.preventDefault()
+    setIsMenuOpen(false)
+    onNavigate?.(target)
+  }
+
+  // Klik logo = muat ulang halaman supaya animasi intro rasi bintang Aries
+  // main dari awal. scrollRestoration dimatikan & scroll di-reset dulu agar
+  // browser tidak mengembalikan posisi scroll lama setelah reload (yang akan
+  // membuat halaman mulai di tengah, bukan di Hero).
+  const handleLogoClick = (e) => {
+    e.preventDefault()
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual'
+    }
+    window.scrollTo(0, 0)
+    window.location.reload()
+  }
 
   // Efek Magnetic Hover pada Logo
   const handleMouseMove = (e) => {
@@ -130,6 +163,7 @@ function Navbar({ visible = false, light = false, isScrolled = false }) {
           <a
             ref={logoRef}
             href="#hero"
+            onClick={handleLogoClick}
             className="group relative inline-block py-2 select-none"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
@@ -154,6 +188,7 @@ function Navbar({ visible = false, light = false, isScrolled = false }) {
                 <li key={link.href}>
                   <a
                     href={link.href}
+                    onClick={(e) => handleNavClick(e, link.target)}
                     className={`relative py-1 text-sm uppercase tracking-[0.2em] after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:transition-transform after:duration-300 after:will-change-transform hover:after:origin-left hover:after:scale-x-100 ${textColorClass} ${underlineColorClass}`}
                   >
                     {link.label}
@@ -190,7 +225,7 @@ function Navbar({ visible = false, light = false, isScrolled = false }) {
       {/* Drawer Panel Menu (Morphing rounded-l liquid entry animation) */}
       <div
         data-drawer-menu
-        className={`fixed right-0 top-0 bottom-0 z-101 h-screen w-full max-w-95 bg-maroon text-cream border-l border-gold/20 shadow-2xl p-10 flex flex-col justify-between transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
+        className={`fixed right-0 top-0 bottom-0 z-101 h-screen w-full max-w-95 ${drawerPanelClass} border-l shadow-2xl p-10 flex flex-col justify-between transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
           isMenuOpen 
             ? 'translate-x-0 rounded-l-none' 
             : 'translate-x-full rounded-l-[150px] md:rounded-l-[200px]'
@@ -200,7 +235,7 @@ function Navbar({ visible = false, light = false, isScrolled = false }) {
         <div className="flex justify-end">
           <button
             onClick={() => setIsMenuOpen(false)}
-            className="p-2 focus:outline-none cursor-pointer hover:rotate-90 transition-transform duration-300 text-cream/70 hover:text-cream"
+            className={`p-2 focus:outline-none cursor-pointer hover:rotate-90 transition-transform duration-300 ${drawerCloseClass}`}
             aria-label="Close Menu"
           >
             <CloseIcon />
@@ -219,8 +254,8 @@ function Navbar({ visible = false, light = false, isScrolled = false }) {
             >
               <a
                 href={link.href}
-                onClick={() => setIsMenuOpen(false)}
-                className="font-display text-3xl md:text-4xl font-bold tracking-widest text-cream hover:text-gold transition-colors duration-300 uppercase block py-2 relative after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-gold after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100"
+                onClick={(e) => handleNavClick(e, link.target)}
+                className={`font-display text-3xl md:text-4xl font-bold tracking-widest ${drawerLinkClass} transition-colors duration-300 uppercase block py-2 relative after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100`}
               >
                 {link.label}
               </a>
@@ -229,7 +264,7 @@ function Navbar({ visible = false, light = false, isScrolled = false }) {
         </ul>
 
         {/* Bottom: Footer Sidebar */}
-        <div className="text-xs uppercase tracking-[0.25em] text-cream/40 pl-4">
+        <div className={`text-xs uppercase tracking-[0.25em] pl-4 ${drawerFooterClass}`}>
           © 2026 Muhammad Wira Hadi
         </div>
       </div>

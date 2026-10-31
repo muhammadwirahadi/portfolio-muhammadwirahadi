@@ -121,6 +121,42 @@ const TECH_ICONS = {
       <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
     </svg>
   ),
+  Nextjs: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M9 8v8M9 8l7 9M15.5 8v4"/>
+    </svg>
+  ),
+  PrismaORM: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L4 19l8 3 8-3L12 2z"/>
+      <path d="M12 2v20"/>
+    </svg>
+  ),
+  JWT: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="11" width="16" height="10" rx="2"/>
+      <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+    </svg>
+  ),
+  Nginx: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/>
+      <path d="M9 16V8l6 8V8"/>
+    </svg>
+  ),
+  PM2: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a9 9 0 1 1-3-6.7"/>
+      <path d="M21 4v5h-5"/>
+    </svg>
+  ),
+  GitHubActions: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M10 8l6 4-6 4V8z"/>
+    </svg>
+  ),
   Tailwind: (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9-9 9-9-1.8-9-9 1.8-9 9-9z"/>
@@ -129,6 +165,55 @@ const TECH_ICONS = {
   ),
 }
 
+
+// Logo asli (brand color) per teknologi - sumber sama dengan section Skills
+// (Devicon via jsDelivr). Teknologi yang tidak ada di Devicon (JWT, PM2,
+// Inertia) diambil dari Simple Icons CDN, yang juga dipakai di Summary.
+// Key = nama teknologi tanpa spasi/titik (lihat TechIcon di bawah).
+const DEVICON_BASE = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons"
+const devicon = (name) => `${DEVICON_BASE}/${name}/${name}-original.svg`
+
+const TECH_LOGOS = {
+  PHP: devicon("php"),
+  Laravel: devicon("laravel"),
+  Laravel10: devicon("laravel"),
+  Vuejs: devicon("vuejs"),
+  Tailwind: devicon("tailwindcss"),
+  MySQL: devicon("mysql"),
+  PostgreSQL: devicon("postgresql"),
+  GitHub: devicon("github"),
+  Nextjs: devicon("nextjs"),
+  PrismaORM: devicon("prisma"),
+  Nginx: devicon("nginx"),
+  GitHubActions: devicon("githubactions"),
+  JWT: "https://cdn.simpleicons.org/jsonwebtokens",
+  PM2: "https://cdn.simpleicons.org/pm2",
+  Inertiajs: "https://cdn.simpleicons.org/inertia",
+}
+
+// Ikon teknologi untuk chip "Technologies Used". Logo asli ditaruh di kotak krem
+// kecil supaya logo gelap (GitHub, Next.js, Prisma) tetap terbaca di kartu
+// maroon. Kalau logo gagal dimuat (offline / CDN down), jatuh balik ke ikon
+// SVG garis bawaan di TECH_ICONS.
+function TechIcon({ name }) {
+  const key = name.replace(/[^a-zA-Z0-9]/g, "")
+  const logoUrl = TECH_LOGOS[key]
+  const [failed, setFailed] = useState(false)
+
+  if (!logoUrl || failed) return TECH_ICONS[key] || null
+
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-cream p-1">
+      <img
+        src={logoUrl}
+        alt=""
+        draggable={false}
+        className="h-full w-full object-contain"
+        onError={() => setFailed(true)}
+      />
+    </span>
+  )
+}
 
 export default function MagneticCarousel({
   images = [],
@@ -292,6 +377,7 @@ export default function MagneticCarousel({
               if (open === i) close()
               else setOpen(i)
             }}
+            data-carousel-card
             className="shadow-xl transition-all duration-300 relative select-none cursor-pointer"
             style={{
               flex: "none",
@@ -329,6 +415,24 @@ export default function MagneticCarousel({
                       <p className="text-sm leading-relaxed text-cream/80 max-w-lg mb-6 font-sans">
                         {img.description}
                       </p>
+
+                      {/* Link ke website project (opsional) - hanya muncul kalau data punya field link */}
+                      {img.link && (
+                        <a
+                          href={img.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          // stopPropagation: biar klik link tidak ikut menutup kartu / modal
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-2 mb-2 px-4 py-2 rounded-full border border-[#D4AF37] text-[#D4AF37] text-xs font-mono uppercase tracking-[0.2em] transition-colors duration-300 hover:bg-[#D4AF37] hover:text-[#4A1620]"
+                          style={{ cursor: "none" }}
+                        >
+                          Visit Website
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M7 17L17 7M8 7h9v9"/>
+                          </svg>
+                        </a>
+                      )}
                     </div>
 
                     <div>
@@ -341,7 +445,7 @@ export default function MagneticCarousel({
                             key={idx} 
                             className="flex items-center gap-1.5 bg-cream/10 border border-cream/15 px-3 py-1.5 rounded-full text-xs font-medium font-mono"
                           >
-                            {TECH_ICONS[t.replace(/[^a-zA-Z0-9]/g, "")] || null}
+                            <TechIcon name={t} />
                             <span>{t}</span>
                           </div>
                         ))}

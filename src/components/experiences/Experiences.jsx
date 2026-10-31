@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import KineticTextGrid from './KineticTextGrid'
 import HoverImageReveal from './HoverImageReveal'
 import SkewInText from './SkewInText'
-import MagneticCarousel from './MagneticCarousel'
+import ProjectModal from './ProjectModal'
 import NextJourneyExperiences from './NextJourneyExperiences'
 import lsfGrid from '../../assets/lsf-grid.png'
 import badilagGrid from '../../assets/badilag-grid.png'
@@ -23,6 +22,14 @@ import badilagLogin from '../../assets/badilag/login-badilag.png'
 import badilagLowongan from '../../assets/badilag/lowongan-badilag.png'
 import badilagPendaftaran from '../../assets/badilag/pendaftaran-badilag.png'
 import badilagWelcome from '../../assets/badilag/welcome-badilag.png'
+
+// Import asset DMDI (thumbnail grid + screens)
+import dmdiGrid from '../../assets/dmdi/dmdi-grid.png'
+import dmdiBeranda from '../../assets/dmdi/01-beranda-dmdi.png'
+import dmdiKhutbah from '../../assets/dmdi/02-khutbah-dmdi.png'
+import dmdiBuku from '../../assets/dmdi/03-buku-dmdi.png'
+import dmdiOpini from '../../assets/dmdi/04-opini-dmdi.png'
+import dmdiAdmin from '../../assets/dmdi/05-admin-dmdi.png'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -42,6 +49,33 @@ const EXPERIENCES_DATA = [
 ]
 
 const PROJECTS_DATA = [
+  {
+    company: "Dewan Masjid Digital Indonesia",
+    period: "Freelance",
+    role: "Backend Developer",
+    image: { src: dmdiGrid },
+    details: {
+      title: "Dewan Masjid Digital Indonesia",
+      role: "Backend Developer (Freelance)",
+      description: "Membangun website CMS untuk publikasi khutbah Jumat mingguan dalam sekitar 12 varian bahasa (Indonesia, Arab, Jawa, Sunda, dll.), lengkap dengan thumbnail dan PDF yang bisa diunduh. Merancang panel admin custom untuk mengelola naskah khutbah berbasis block JSON, buku, admin, dan inbox opini/pertanyaan dengan balasan via email. Menerapkan autentikasi JWT, rate limiting, dan hardening keamanan form publik, lalu men-deploy ke VPS (Nginx, PM2, SSL) dengan CI/CD GitHub Actions serta memigrasikan situs WordPress/Elementor lama klien ke Next.js.",
+      tech: ["Next.js", "Prisma ORM", "PostgreSQL", "JWT", "Nginx", "PM2", "GitHub Actions"],
+      carouselImages: [
+        {
+          isInfo: true,
+          title: "DMDI - Dewan Masjid Digital Indonesia",
+          role: "Backend Developer",
+          link: "https://dewanmasjiddigitalindonesia.com/",
+          description: "Website CMS khutbah Jumat mingguan dengan ~12 varian bahasa, panel admin custom, autentikasi JWT, rate limiting, dan deployment otomatis via GitHub Actions ke VPS. Migrasi dari WordPress/Elementor ke Next.js 15.",
+          tech: ["Next.js", "Prisma ORM", "PostgreSQL", "JWT", "Nginx", "PM2", "GitHub Actions"]
+        },
+        { src: dmdiBeranda },
+        { src: dmdiKhutbah },
+        { src: dmdiBuku },
+        { src: dmdiOpini },
+        { src: dmdiAdmin }
+      ]
+    }
+  },
   {
     company: "Lembaga Sensor Film RI",
     period: "Contract",
@@ -76,12 +110,13 @@ const PROJECTS_DATA = [
     details: {
       title: "Ditjen Badan Peradilan Agama",
       role: "Backend Developer (Internship)",
-      description: "Pengembangan website portal pendaftaran magang untuk Ditjen Badilag Mahkamah Agung RI dengan fokus utama pada sisi Backend. Bertanggung jawab atas perancangan Entity Relationship Diagram (ERD) database, arsitektur role-based access control, Validasi Data, Autentikasi saat login, pembuatan fitur fungsional untuk masing-masing user role, serta kontribusi minor pada pengerjaan visual antarmuka.",
+      description: "Pengembangan website portal pendaftaran magang untuk Direktorat Jendral Badan Peradilan Agama Mahkamah Agung RI dengan fokus utama pada sisi Backend. Bertanggung jawab atas perancangan Entity Relationship Diagram (ERD) database, arsitektur role-based access control, Validasi Data, Autentikasi saat login, pembuatan fitur fungsional untuk masing-masing user role, serta kontribusi minor pada pengerjaan visual antarmuka.",
       tech: ["PHP", "Laravel 10", "Vue.js", "Inertia.js", "Tailwind", "MySQL", "GitHub"],
       carouselImages: [
         { 
           isInfo: true, 
-          title: "Badilag MA RI", 
+          title: "Badilag - Ditjen Badan Peradilan Agama",
+          link: "https://magang.badilag.net/", 
           role: "Backend Developer", 
           description: "Portal pendaftaran magang Ditjen Badilag MA RI. Berfokus pada pengembangan backend, arsitektur role-based, perancangan Entity Relationship Diagram (ERD), Validasi Data, Autentikasi saat login, dan fungsionalitas fitur pengguna.", 
           tech: ["PHP", "Laravel 10", "Vue.js", "Inertia.js", "Tailwind", "MySQL", "GitHub"] 
@@ -115,6 +150,8 @@ function Experiences({ active = false, onBack, setNavbarVisible, onNextJourney, 
 
   // State untuk mengontrol project detail modal
   const [selectedProject, setSelectedProject] = useState(null)
+  // Titik klik user saat membuka project - jadi pusat animasi lingkaran mekar di ProjectModal
+  const [clickOrigin, setClickOrigin] = useState(null)
 
   useEffect(() => {
     const handleResize = () => {
@@ -388,7 +425,10 @@ function Experiences({ active = false, onBack, setNavbarVisible, onNextJourney, 
               textColor="#4A1620" 
               dimColor="rgba(74, 22, 32, 0.35)"
               cursorText="View"
-              onItemClick={(item) => setSelectedProject(item.details)}
+              onItemClick={(item, _index, point) => {
+                setClickOrigin(point)
+                setSelectedProject(item.details)
+              }}
             />
           </div>
         </div>
@@ -408,51 +448,13 @@ function Experiences({ active = false, onBack, setNavbarVisible, onNextJourney, 
         </div>
       )}
 
-      {/* MODAL DETAIL PROJECT (Magnetic Carousel) */}
+      {/* MODAL DETAIL PROJECT - animasi masuk/keluar & carousel ada di ProjectModal */}
       {selectedProject && (
-        <div 
-          className="fixed inset-0 bg-[#F8F1DC]/97 z-[999] backdrop-blur-md flex flex-col items-center justify-center p-6"
-          onClick={() => setSelectedProject(null)}
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
-        >
-          {/* Container Magnetic Carousel */}
-          <div 
-            className="w-full max-w-6xl h-[500px] flex items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <MagneticCarousel images={selectedProject.carouselImages} openSizeWidth={750} openSizeHeight={420} />
-          </div>
-
-          {/* Instruksi Pengguna */}
-          <p className="mt-8 text-xs font-mono uppercase tracking-[0.2em] text-[#4A1620]/60 select-none animate-pulse">
-            Click cards to expand/collapse • Click outside or button to close
-          </p>
-
-          {/* Tombol Tutup Silang di Kanan Atas (Dibuat sejajar dengan batas konten/hamburger menu) */}
-          <div className="absolute top-28 left-0 right-0 max-w-6xl w-full mx-auto px-6 pointer-events-none z-50">
-            <motion.div 
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedProject(null)
-              }}
-              role="button"
-              className="absolute right-6 top-0 text-[#4A1620] cursor-pointer font-bold text-2xl flex items-center justify-center h-12 w-12 border border-[#4A1620]/25 rounded-full select-none pointer-events-auto"
-              style={{ zIndex: 10000, cursor: "none" }}
-              whileHover={{ 
-                scale: 1.1, 
-                rotate: 90, 
-                backgroundColor: "#4A1620", 
-                borderColor: "#4A1620",
-                color: "#F8F1DC" 
-              }}
-              whileTap={{ scale: 0.9 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            >
-              &times;
-            </motion.div>
-          </div>
-        </div>
+        <ProjectModal
+          project={selectedProject}
+          origin={clickOrigin}
+          onClose={() => setSelectedProject(null)}
+        />
       )}
     </div>
   )

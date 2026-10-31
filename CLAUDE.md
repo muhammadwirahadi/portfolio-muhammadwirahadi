@@ -24,6 +24,7 @@ src/
 ├── assets/
 │   ├── profile.png                  - foto profil Wira
 │   ├── contact-illustration.png     - ilustrasi halaman Contact
+│   ├── dmdi/                        - screenshot project Dewan Masjid Digital Indonesia (dibaca otomatis via import.meta.glob; file bernama "*grid*" = thumbnail hover)
 │   ├── lsf-grid.png / badilag-grid.png  - thumbnail project grid
 │   ├── lsf/                         - screenshot screens LSF (5 gambar)
 │   └── badilag/                     - screenshot screens Badilag (5 gambar)
