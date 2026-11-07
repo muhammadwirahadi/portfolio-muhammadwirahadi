@@ -134,8 +134,11 @@ function Summary({ active = false, onBack, setNavbarVisible, scrollerRef, onNext
             {/* Tombol Download CV */}
             <a
               ref={ctaRef}
-              href="/cv-muhammad-wira-hadi.pdf"
-              download
+              // BASE_URL = base di vite.config.js ('/portfolio-muhammadwirahadi/').
+              // Jangan tulis '/cv-...pdf' langsung: itu menunjuk ke root domain, bukan
+              // ke subpath GitHub Pages, jadi file-nya tidak ketemu (404).
+              href={`${import.meta.env.BASE_URL}cv-muhammad-wira-hadi.pdf`}
+              download="cv-muhammad-wira-hadi.pdf"
               onMouseEnter={handleCtaEnter}
               onMouseLeave={handleCtaLeave}
               className="group inline-flex w-fit items-center gap-3 rounded-full bg-[#4A1620] px-7 py-3.5 text-sm uppercase tracking-[0.2em] text-[#F0E4C8] transition-colors duration-300 hover:bg-[#D4AF37] hover:text-[#4A1620]"
