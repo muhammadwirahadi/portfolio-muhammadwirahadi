@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useMemo } from "react"
 import { motion, useAnimate } from "framer-motion"
 
-function __OriginkitBase_SkewInText(props) {
+function SkewInTextBase(props) {
   const {
     width,
     height,
@@ -205,5 +205,5 @@ const __originkitPresetProps = {
 }
 
 export default function SkewInText(props) {
-  return <__OriginkitBase_SkewInText {...__originkitPresetProps} {...props} />
+  return <SkewInTextBase {...__originkitPresetProps} {...props} />
 }

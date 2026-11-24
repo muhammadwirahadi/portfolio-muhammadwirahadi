@@ -9,7 +9,7 @@ gsap.registerPlugin(ScrollTrigger)
 const svgToBase64 = (svgString) => {
   try {
     return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
-  } catch (e) {
+  } catch {
     return `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
   }
 };

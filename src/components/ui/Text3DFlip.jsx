@@ -106,7 +106,7 @@ const CharBox = memo(
 
 CharBox.displayName = "CharBox";
 
-function __OriginkitBase_Text3DFlip(props) {
+function Text3DFlipBase(props) {
   const {
     text = "EXPERIENCES",
     font = DEFAULT_FONT,
@@ -310,7 +310,7 @@ function __OriginkitBase_Text3DFlip(props) {
   );
 }
 
-__OriginkitBase_Text3DFlip.displayName = "Text3DFlipBase";
+Text3DFlipBase.displayName = "Text3DFlipBase";
 
 const __originkitPresetProps = {
   "text": "EXPERIENCES",
@@ -319,5 +319,5 @@ const __originkitPresetProps = {
 };
 
 export default function Text3DFlip(props) {
-  return <__OriginkitBase_Text3DFlip {...__originkitPresetProps} {...props} />;
+  return <Text3DFlipBase {...__originkitPresetProps} {...props} />;
 }

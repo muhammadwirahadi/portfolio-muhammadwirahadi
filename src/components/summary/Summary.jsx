@@ -28,7 +28,7 @@ const STATS = [
   { value: '3', label: 'Major Projects Shipped' },
 ]
 
-function Summary({ active = false, onBack, setNavbarVisible, scrollerRef, onNextJourney }) {
+function Summary({ active = false, setNavbarVisible, scrollerRef, onNextJourney }) {
   const containerRef = useRef(null)
   const titleRef = useRef(null)
   const lineRef = useRef(null)

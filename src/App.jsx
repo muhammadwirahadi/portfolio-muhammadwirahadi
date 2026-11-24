@@ -13,7 +13,6 @@ import Skills from './components/about/Skills'
 import ShootingStars from './components/about/ShootingStars'
 import NextJourney from './components/about/NextJourney'
 import SpaceTransitionScroll from './components/experiences/SpaceTransitionScroll'
-import Experiences from './components/experiences/Experiences'
 import SummarySpaceTransition from './components/summary/SummarySpaceTransition'
 import ContactSpaceTransition from './components/contact/ContactSpaceTransition'
 

@@ -1,11 +1,22 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 const DEFAULT_IMAGE =
   'https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/041b1d75-2371-44dc-4b15-972ecd7b2400/w=800'
 
+// Iterasi solver tekanan per frame. Ini bagian paling mahal dari simulasi
+// (1 render pass per iterasi). Karena resolusi simulasi sekarang lebih kecil,
+// iterasi yang dibutuhkan untuk hasil sehalus sebelumnya juga lebih sedikit.
+const PRESSURE_ITERATIONS = 10
+
+// Simulasi cuma perlu jalan selama masih ada gerakan yang meredam. Setelah
+// interaksi terakhir (mouse/touch), distorsi meluruh ~2% per frame, jadi
+// ~360 frame (sekitar 6 detik di 60fps) sudah tidak terlihat lagi. Sesudah
+// itu loop dihentikan total sampai ada interaksi baru.
+const IDLE_FRAMES_AFTER_INTERACTION = 360
+
 export default function LiquidHover({
   imageSrc = DEFAULT_IMAGE,
-  resolution = 10,
+  resolution = 5,
   cursorSize = 50,
   intensity = 50,
   style,
@@ -49,6 +60,21 @@ export default function LiquidHover({
     let imgRatio = 1
     const isPreview = false
     let isHovering = false
+
+    // --- Kontrol loop render (hemat GPU) ---
+    // isRunning      : loop rAF sedang berjalan
+    // isVisible      : canvas sedang masuk viewport (IntersectionObserver)
+    // idleFramesLeft : sisa frame simulasi sebelum loop berhenti sendiri
+    let isRunning = false
+    let isVisible = true
+    let isDisposed = false
+    let idleFramesLeft = 0
+    let lastSizeKey = ''
+    // Resource GL yang dibuat manual dicatat supaya bisa dihapus saat resize /
+    // unmount. Tanpa ini memori GPU terus bertambah.
+    let quadVbo = null
+    let quadEbo = null
+    const fboResources = []
 
     const VERT = `
 precision highp float;
@@ -295,16 +321,19 @@ void main () {
       }
       return { program, uniforms }
     }
-    function blit(target = null) {
-      const vbo = gl.createBuffer()
-      gl.bindBuffer(gl.ARRAY_BUFFER, vbo)
+    // Quad layar-penuh dibuat SEKALI saja. Dulu buffer dibuat ulang di setiap
+    // blit() (~22x per frame) dan tidak pernah dihapus, jadi buffer GPU bocor
+    // ribuan per detik dan web makin berat semakin lama dibuka.
+    function setupQuad() {
+      quadVbo = gl.createBuffer()
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadVbo)
       gl.bufferData(
         gl.ARRAY_BUFFER,
         new Float32Array([-1, -1, -1, 1, 1, 1, 1, -1]),
         gl.STATIC_DRAW
       )
-      const ebo = gl.createBuffer()
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
+      quadEbo = gl.createBuffer()
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadEbo)
       gl.bufferData(
         gl.ELEMENT_ARRAY_BUFFER,
         new Uint16Array([0, 1, 2, 0, 2, 3]),
@@ -312,6 +341,8 @@ void main () {
       )
       gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
       gl.enableVertexAttribArray(0)
+    }
+    function blit(target = null) {
       if (target == null) {
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)
         gl.bindFramebuffer(gl.FRAMEBUFFER, null)
@@ -331,6 +362,8 @@ void main () {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, w, h, 0, gl.RGB, gl.FLOAT, null)
       const fbo = gl.createFramebuffer()
+      // Dicatat supaya bisa dihapus lewat disposeFBOs()
+      fboResources.push({ fbo, texture })
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo)
       gl.framebufferTexture2D(
         gl.FRAMEBUFFER,
@@ -380,13 +413,25 @@ void main () {
     const advectionProgram = createProgramFromSources(VERT, FRAG_ADVECT)
     const displayProgram = createProgramFromSources(VERT, FRAG_OUTPUT)
 
+    setupQuad()
     resizeCanvas()
     initFBOs()
+    lastSizeKey = getSizeKey()
     const cleanupEvents = setupEvents()
-    render(0)
+    // Gambar beberapa frame awal saja; loop berhenti sendiri kalau tidak ada interaksi
+    wake(3)
     loadImage(imageSrc)
 
+    function disposeFBOs() {
+      for (const { fbo, texture } of fboResources) {
+        gl.deleteFramebuffer(fbo)
+        gl.deleteTexture(texture)
+      }
+      fboResources.length = 0
+    }
     function initFBOs() {
+      // Hapus FBO lama dulu: initFBOs dipanggil lagi di setiap resize
+      disposeFBOs()
       outputColor = createDoubleFBO(res.w, res.h)
       velocity = createDoubleFBO(res.w, res.h)
       divergence = createFBO(res.w, res.h)
@@ -398,6 +443,8 @@ void main () {
       pointer.dy = 6 * (eY - pointer.y)
       pointer.x = eX
       pointer.y = eY
+      // Ada gerakan baru: pastikan simulasi jalan sampai efeknya meluruh
+      wake(IDLE_FRAMES_AFTER_INTERACTION)
     }
     function setupEvents() {
       const onEnter = () => {
@@ -432,9 +479,16 @@ void main () {
         pointer.moved = false
       }
       const onResize = () => {
+        // ResizeObserver & window resize bisa memanggil ini berulang kali dengan
+        // ukuran yang sama - lewati kalau tidak ada yang berubah.
+        const sizeKey = getSizeKey()
+        if (sizeKey === lastSizeKey) return
+        lastSizeKey = sizeKey
         resizeCanvas()
         initFBOs()
         if (imageTexture) gl.bindTexture(gl.TEXTURE_2D, imageTexture)
+        // Mengubah ukuran canvas mengosongkan isinya: gambar ulang beberapa frame
+        wake(3)
       }
       canvas.addEventListener('mouseenter', onEnter)
       canvas.addEventListener('mouseleave', onLeave)
@@ -448,6 +502,18 @@ void main () {
         onResize()
       })
       resizeObserver.observe(container)
+
+      // Jeda simulasi saat canvas keluar dari layar (user sudah scroll jauh),
+      // lanjut lagi begitu terlihat.
+      const intersectionObserver = new IntersectionObserver(
+        (entries) => {
+          isVisible = entries[0].isIntersecting
+          if (isVisible) wake(3)
+        },
+        { threshold: 0 }
+      )
+      intersectionObserver.observe(container)
+
       return () => {
         canvas.removeEventListener('mouseenter', onEnter)
         canvas.removeEventListener('mouseleave', onLeave)
@@ -457,8 +523,13 @@ void main () {
         canvas.removeEventListener('touchend', onTouchEnd)
         canvas.removeEventListener('touchmove', onTouchMove)
         window.removeEventListener('resize', onResize)
+        intersectionObserver.disconnect()
         resizeObserver.disconnect()
       }
+    }
+    function getSizeKey() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      return `${container.clientWidth}x${container.clientHeight}@${dpr}`
     }
     function resizeCanvas() {
       const width = container.clientWidth
@@ -489,6 +560,8 @@ void main () {
       img.crossOrigin = 'anonymous'
       img.src = src
       img.onload = () => {
+        // Effect sudah dibersihkan sebelum gambar selesai dimuat
+        if (isDisposed) return
         imgRatio = img.naturalWidth / Math.max(1, img.naturalHeight)
         imageTexture = gl.createTexture()
         gl.bindTexture(gl.TEXTURE_2D, imageTexture)
@@ -506,9 +579,11 @@ void main () {
           gl.UNSIGNED_BYTE,
           img
         )
+        // Gambar baru siap: gambar ulang
+        wake(3)
       }
     }
-    function render(_t) {
+    function render() {
       const dt = 1 / 60
       if (pointer.moved) {
         if (!isPreview) pointer.moved = false
@@ -568,7 +643,7 @@ void main () {
         pressureProgram.uniforms.u_divergence_texture,
         divergence.attach(1)
       )
-      for (let i = 0; i < 16; i++) {
+      for (let i = 0; i < PRESSURE_ITERATIONS; i++) {
         gl.uniform1i(
           pressureProgram.uniforms.u_pressure_texture,
           pressure.read().attach(2)
@@ -656,16 +731,52 @@ void main () {
         gl.bindTexture(gl.TEXTURE_2D, imageTexture)
         gl.uniform1i(displayProgram.uniforms.u_text_texture, 0)
       }
+      // blit() tanpa target sudah menggambar ke layar. Dulu di sini ada
+      // drawElements kedua yang menggambar hasil yang sama sekali lagi.
       blit()
-      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0)
+
+      // Lanjutkan loop hanya kalau masih ada alasan: canvas terlihat, belum
+      // di-dispose, dan masih ada sisa frame dari interaksi terakhir.
+      if (isDisposed || !isVisible || idleFramesLeft <= 0) {
+        isRunning = false
+        rafRef.current = null
+        return
+      }
+      idleFramesLeft -= 1
+      rafRef.current = requestAnimationFrame(render)
+    }
+
+    // Menyalakan loop (kalau sedang berhenti) dan memastikan ia jalan minimal
+    // `frames` frame lagi.
+    function wake(frames) {
+      idleFramesLeft = Math.max(idleFramesLeft, frames)
+      if (isRunning || isDisposed || !isVisible) return
+      isRunning = true
       rafRef.current = requestAnimationFrame(render)
     }
 
     return () => {
+      isDisposed = true
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
       if (typeof cleanupEvents === 'function') cleanupEvents()
+
+      // Bebaskan resource GPU. Sengaja TIDAK memakai WEBGL_lose_context: React
+      // StrictMode (dev) memasang ulang effect di canvas yang sama, dan context
+      // yang sudah di-"lose" tidak bisa dipakai lagi.
+      disposeFBOs()
+      if (quadVbo) gl.deleteBuffer(quadVbo)
+      if (quadEbo) gl.deleteBuffer(quadEbo)
+      if (imageTexture) gl.deleteTexture(imageTexture)
+      const programs = [
+        splatProgram,
+        divergenceProgram,
+        pressureProgram,
+        gradientSubtractProgram,
+        advectionProgram,
+        displayProgram,
+      ]
+      programs.forEach(({ program }) => gl.deleteProgram(program))
     }
   }, [imageSrc, resolution, cursorSize, intensity])
 

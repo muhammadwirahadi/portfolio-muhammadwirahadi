@@ -135,6 +135,9 @@ Ini adalah single-page scrollytelling dengan rantai transisi kosmik. Urutan dari
 - **Bug klasik GSAP context**: Jangan referensikan `const context = gsap.context(fn, scope)` dari dalam `fn` — itu Temporal Dead Zone error. Pakai variabel `let` terpisah.
 - **Setiap SpaceTransition** mengambil ukuran bintang asal dan target dari DOM via `getBoundingClientRect` saat `useEffect` dijalankan setelah `active` jadi `true`. Jangan hardcode koordinat.
 - **Scroll lock di Experiences**: `globalLenis.stop()` dipanggil saat section Experiences masuk, `globalLenis.start()` baru dipanggil di `onComplete` GSAP timeline entry terakhir (bukan di callback `handleKineticComplete`).
+- **Aturan performa untuk loop animasi (canvas/WebGL)**: setiap komponen yang punya loop `requestAnimationFrame` sendiri WAJIB berhenti saat tidak terlihat (pakai `IntersectionObserver` di container-nya) dan, kalau hasilnya bisa diam, saat idle. Jangan biarkan loop jalan terus di section yang belum/sudah dilewati.
+- **`LiquidHover.jsx` (WebGL)**: quad layar-penuh dibuat SEKALI di `setupQuad()` (jangan buat buffer di dalam `blit()`). Semua FBO/texture/program dicatat & dihapus (`disposeFBOs`, cleanup effect). Jangan pakai `WEBGL_lose_context` di cleanup (merusak React StrictMode). Loop dibangunkan lewat `wake(frames)` setiap ada interaksi/resize/gambar siap, lalu berhenti sendiri. Resolusi simulasi `resolution={5}` dan `PRESSURE_ITERATIONS = 10`; menaikkannya berarti beban GPU naik tajam.
+- **`Sparkles.jsx` (canvas 2D)**: ada beberapa instance sekaligus (Hero + 3 transisi). Titik digambar lewat sprite (`drawImage`), bukan `arc`+`fill`. Jumlah partikel dikalikan `DENSITY_SCALE` dan dibatasi `MAX_PARTICLES`; FPS dibatasi `TARGET_FPS` (gerak diskalakan dengan delta waktu); DPR dibatasi `MAX_DPR`.
 
 ---
 

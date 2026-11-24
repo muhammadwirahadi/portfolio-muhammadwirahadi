@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 
-function __OriginkitBase_CrystalGlow({
+function CrystalGlowBase({
   text = 'Click!',
   fontFamily = 'Playball, cursive',
   fontWeight = 400,
@@ -174,5 +174,5 @@ function Sparkle() {
 }
 
 export default function CrystalGlow(props) {
-  return <__OriginkitBase_CrystalGlow {...props} />
+  return <CrystalGlowBase {...props} />
 }

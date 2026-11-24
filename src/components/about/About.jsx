@@ -155,7 +155,7 @@ function About({ play = false, onAnimationComplete }) {
             >
               <LiquidHover
                 imageSrc={profilePhoto}
-                resolution={10}
+                resolution={5}
                 cursorSize={50}
                 intensity={35}
               />

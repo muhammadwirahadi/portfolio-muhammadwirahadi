@@ -80,6 +80,15 @@ const DEFAULTS = {
   angle: 64,
 }
 
+// --- Pengaturan performa ---
+// Partikelnya cuma titik 1-3px yang berkedip pelan, jadi tidak perlu sepadat
+// & sehalus aslinya. Semua angka di bawah menurunkan beban tanpa mengubah
+// kesan "debu bintang" secara berarti.
+const DENSITY_SCALE = 0.5 // pengali jumlah partikel dari hasil density
+const MAX_PARTICLES = 650 // batas atas (layar besar / 4K)
+const MAX_DPR = 1.5 // resolusi backing store maksimal (titik kecil tak butuh 2x-3x)
+const TARGET_FPS = 30 // gerak & kedip lambat, 30fps sudah mulus
+
 // UI 1..10 -> internal 0.5..12 (kecepatan flicker)
 function mapFlickerUiToInternal(ui) {
   const clamped = Math.max(1, Math.min(10, ui))
@@ -136,7 +145,10 @@ function Sparkles({
       const particles = []
       const area = width * height
       const mappedDensity = mapDensityUiToInternal(particleDensity)
-      const count = Math.floor((area / 1e4) * mappedDensity)
+      const count = Math.min(
+        MAX_PARTICLES,
+        Math.floor((area / 1e4) * mappedDensity * DENSITY_SCALE)
+      )
       const velocityMultiplier = (particleSpeed / 10) * 0.5
 
       for (let i = 0; i < count; i++) {
@@ -153,16 +165,19 @@ function Sparkles({
       particlesRef.current = particles
     }
 
+    // Ukuran area gambar (CSS px), diisi oleh resize() dan dipakai loop animasi
+    let viewWidth = 1
+    let viewHeight = 1
     const resize = () => {
-      const dpr = window.devicePixelRatio || 1
-      const width = container.clientWidth || container.offsetWidth || 1
-      const height = container.clientHeight || container.offsetHeight || 1
-      canvas.width = width * dpr
-      canvas.height = height * dpr
-      canvas.style.width = `${width}px`
-      canvas.style.height = `${height}px`
+      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
+      viewWidth = container.clientWidth || container.offsetWidth || 1
+      viewHeight = container.clientHeight || container.offsetHeight || 1
+      canvas.width = Math.round(viewWidth * dpr)
+      canvas.height = Math.round(viewHeight * dpr)
+      canvas.style.width = `${viewWidth}px`
+      canvas.style.height = `${viewHeight}px`
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      initParticles(width, height)
+      initParticles(viewWidth, viewHeight)
     }
     resize()
 
@@ -177,50 +192,118 @@ function Sparkles({
     const particleColorRgba = parseColorToRgba(particleColor)
     const particleColorBase = rgbaToCanvasColor({ ...particleColorRgba, a: 1 })
 
-    const drawParticles = (width, height) => {
-      ctx.clearRect(0, 0, width, height)
-      ctx.fillStyle = backgroundColor
-      ctx.fillRect(0, 0, width, height)
-      ctx.fillStyle = particleColorBase
+    // Titik bulat digambar SEKALI ke kanvas kecil (sprite), lalu tiap partikel
+    // cukup di-drawImage dengan ukuran & opacity masing-masing. Jauh lebih murah
+    // daripada beginPath + arc + fill untuk setiap partikel di setiap frame.
+    const SPRITE_PX = 16
+    const sprite = document.createElement('canvas')
+    sprite.width = SPRITE_PX
+    sprite.height = SPRITE_PX
+    const spriteCtx = sprite.getContext('2d')
+    spriteCtx.fillStyle = particleColorBase
+    spriteCtx.beginPath()
+    spriteCtx.arc(SPRITE_PX / 2, SPRITE_PX / 2, SPRITE_PX / 2, 0, Math.PI * 2)
+    spriteCtx.fill()
+
+    const drawParticles = () => {
+      ctx.clearRect(0, 0, viewWidth, viewHeight)
+      // Background default-nya transparan: tidak perlu mengisi apa-apa
+      if (backgroundRgba.a > 0) {
+        ctx.fillStyle = backgroundColor
+        ctx.fillRect(0, 0, viewWidth, viewHeight)
+      }
       for (const particle of particlesRef.current) {
         ctx.globalAlpha = particleColorRgba.a * particle.opacity
-        ctx.beginPath()
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
-        ctx.fill()
+        const diameter = particle.size * 2
+        ctx.drawImage(
+          sprite,
+          particle.x - particle.size,
+          particle.y - particle.size,
+          diameter,
+          diameter
+        )
       }
       ctx.globalAlpha = 1
     }
 
-    const animate = () => {
-      const dpr = window.devicePixelRatio || 1
-      const width = canvas.width / dpr
-      const height = canvas.height / dpr
+    // --- Loop animasi ---
+    // isVisible: dari IntersectionObserver. Kanvas di luar layar (misal section
+    // yang belum dicapai, atau sudah dilewati) berhenti total, bukan sekadar
+    // menggambar sesuatu yang tidak terlihat.
+    let isRunning = false
+    let isVisible = true
+    let lastFrameTime = 0
+    const frameInterval = 1000 / TARGET_FPS
+
+    const animate = (now) => {
+      if (!isVisible) {
+        isRunning = false
+        animationRef.current = null
+        return
+      }
+      animationRef.current = requestAnimationFrame(animate)
+
+      // Batasi ke TARGET_FPS (monitor 120/144Hz tidak perlu menggambar ulang
+      // titik-titik pelan ini sebanyak itu)
+      const elapsed = now - lastFrameTime
+      if (elapsed < frameInterval - 1) return
+      lastFrameTime = now
+
+      // Skala langkah gerak terhadap 60fps supaya kecepatan drift & kedip tetap
+      // sama walau frame-nya lebih jarang. Dibatasi agar tidak "loncat" setelah
+      // tab/section lama tidak terlihat.
+      const step = Math.min(elapsed, 100) / (1000 / 60)
 
       for (const particle of particlesRef.current) {
-        particle.x += particle.vx + driftVx
-        particle.y += particle.vy + driftVy
-        if (particle.x < 0) particle.x = width
-        if (particle.x > width) particle.x = 0
-        if (particle.y < 0) particle.y = height
-        if (particle.y > height) particle.y = 0
+        particle.x += (particle.vx + driftVx) * step
+        particle.y += (particle.vy + driftVy) * step
+        if (particle.x < 0) particle.x = viewWidth
+        if (particle.x > viewWidth) particle.x = 0
+        if (particle.y < 0) particle.y = viewHeight
+        if (particle.y > viewHeight) particle.y = 0
 
-        particle.opacity += particle.opacityVel * mappedSpeed * 0.5
+        particle.opacity += particle.opacityVel * mappedSpeed * 0.5 * step
         if (particle.opacity <= 0.1 || particle.opacity >= 1) {
           particle.opacityVel *= -1
         }
         particle.opacity = Math.max(0.1, Math.min(1, particle.opacity))
       }
 
-      drawParticles(width, height)
+      drawParticles()
+    }
+
+    const start = () => {
+      if (isRunning || !isVisible) return
+      isRunning = true
+      // Mundurkan 1 interval supaya frame pertama langsung digambar
+      lastFrameTime = performance.now() - frameInterval
       animationRef.current = requestAnimationFrame(animate)
     }
-    animate()
 
-    window.addEventListener('resize', resize)
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        isVisible = entries[0].isIntersecting
+        if (isVisible) start()
+      },
+      { threshold: 0 }
+    )
+    intersectionObserver.observe(container)
+
+    // Mengubah ukuran canvas mengosongkan isinya, jadi gambar ulang segera
+    const handleResize = () => {
+      resize()
+      drawParticles()
+    }
+    window.addEventListener('resize', handleResize)
+
+    start()
 
     return () => {
+      isVisible = false
       if (animationRef.current) cancelAnimationFrame(animationRef.current)
-      window.removeEventListener('resize', resize)
+      animationRef.current = null
+      intersectionObserver.disconnect()
+      window.removeEventListener('resize', handleResize)
     }
   }, [
     background,

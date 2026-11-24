@@ -131,7 +131,7 @@ const PROJECTS_DATA = [
   },
 ]
 
-function Experiences({ active = false, onBack, setNavbarVisible, onNextJourney, showNextJourneyCue = true }) {
+function Experiences({ active = false, setNavbarVisible, onNextJourney, showNextJourneyCue = true }) {
   const containerRef = useRef(null)
   
   // Refs untuk seksi Experiences (Page 1)
@@ -286,7 +286,7 @@ function Experiences({ active = false, onBack, setNavbarVisible, onNextJourney, 
   const handleKineticComplete = () => {
     setKineticComplete(true)
 
-    const context = gsap.context(() => {
+    gsap.context(() => {
       gsap.set(titleRef.current, { opacity: 1 })
 
       const tl = gsap.timeline({
@@ -325,7 +325,7 @@ function Experiences({ active = false, onBack, setNavbarVisible, onNextJourney, 
 
   // Callback dipicu saat huruf-huruf Projects selesai skew-in
   const handleProjectsTitleComplete = () => {
-    const context = gsap.context(() => {
+    gsap.context(() => {
       const tl = gsap.timeline()
       
       tl.to(projectsLineRef.current, {
