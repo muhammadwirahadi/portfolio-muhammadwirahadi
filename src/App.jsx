@@ -18,6 +18,11 @@ import ContactSpaceTransition from './components/contact/ContactSpaceTransition'
 
 gsap.registerPlugin(ScrollTrigger)
 
+// Di HP, address bar browser muncul/hilang saat scroll dan mengubah tinggi
+// viewport. Tanpa ini, setiap perubahan itu memicu ScrollTrigger.refresh() dan
+// membuat section yang di-pin terlihat melompat.
+ScrollTrigger.config({ ignoreMobileResize: true })
+
 // Bintang yang jadi target zoom - harus cocok dengan salah satu id di
 // ARIES_STARS pada Constellation.jsx.
 const ZOOM_TARGET_STAR_ID = '41-ari'
@@ -446,7 +451,7 @@ function App() {
       </div>
 
       {/* Section Hero - Pinned container z-20 (normal pointer events!) */}
-      <section ref={heroSectionRef} id="hero" className="relative z-20 h-screen overflow-hidden bg-transparent">
+      <section ref={heroSectionRef} id="hero" className="relative z-20 h-svh overflow-hidden bg-transparent">
         {/* 1. Lapisan bintang dekorasi latar - absolute z-0 */}
         <Sparkles className="pointer-events-none absolute inset-0 z-0 h-full w-full" active={!lightTheme} />
 

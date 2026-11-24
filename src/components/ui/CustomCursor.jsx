@@ -199,7 +199,7 @@ function CustomCursor({ light = false }) {
   return (
     <div
       ref={cursorRef}
-      className={`pointer-events-none fixed left-0 top-0 z-[9999] hidden -translate-x-1/2 -translate-y-1/2 md:block transition-opacity duration-300 ${
+      className={`pointer-events-none fixed left-0 top-0 z-[9999] hidden -translate-x-1/2 -translate-y-1/2 [@media(hover:hover)_and_(pointer:fine)]:block transition-opacity duration-300 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
       style={{ transformBox: 'fill-box' }}

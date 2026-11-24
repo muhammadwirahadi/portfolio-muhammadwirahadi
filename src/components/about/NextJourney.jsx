@@ -105,16 +105,16 @@ function NextJourney({ active = false, onNavigate }) {
     <section
       ref={sectionRef}
       id="next-journey"
-      className="relative z-20 flex h-screen w-full items-center justify-center overflow-hidden bg-transparent py-24 text-maroon"
+      className="relative z-20 flex h-svh w-full items-center justify-center overflow-hidden bg-transparent py-16 text-maroon md:py-24"
     >
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-12 md:gap-32 px-6 max-w-6xl mx-auto w-full">
+      <div className="relative z-10 flex flex-col lg:flex-row items-center justify-center gap-8 md:gap-12 lg:gap-32 px-6 max-w-6xl mx-auto w-full">
         {/* Teks "Still Curious ?" di Sebelah Kiri (Stacked 2 Baris untuk Keseimbangan Visual) */}
         <h2
           ref={titleRef}
-          className="font-display text-5xl md:text-7xl font-bold uppercase tracking-widest text-maroon select-none text-center md:text-left leading-[1.1] whitespace-pre-line"
+          className="font-display text-4xl sm:text-5xl lg:text-7xl font-bold uppercase tracking-widest text-maroon select-none text-center lg:text-left leading-[1.1] whitespace-pre-line"
         >
           Still
-          <br className="hidden md:block" />
+          <br className="hidden lg:block" />
           Curious?
         </h2>
 
@@ -125,12 +125,12 @@ function NextJourney({ active = false, onNavigate }) {
           onMouseLeave={handleMouseLeave}
           onClick={onNavigate}
           data-cursor-light="true"
-          className="relative flex h-120 w-120 items-center justify-center pointer-events-auto cursor-pointer"
+          className="relative flex size-[min(82vw,46svh)] lg:size-120 items-center justify-center pointer-events-auto cursor-pointer"
         >
           {/* Tombol Bulat Raksasa Bagian Dalam */}
           <button
             ref={buttonInnerRef}
-            className={`group relative flex h-95 w-95 items-center justify-center rounded-full border transition-all duration-500 shadow-sm focus:outline-none pointer-events-none overflow-hidden ${
+            className={`group relative flex size-[79%] lg:size-95 items-center justify-center rounded-full border transition-all duration-500 shadow-sm focus:outline-none pointer-events-none overflow-hidden ${
               isHovered 
                 ? 'bg-maroon border-maroon' 
                 : 'bg-transparent border-maroon/20'

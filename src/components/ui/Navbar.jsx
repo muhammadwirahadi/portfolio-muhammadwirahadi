@@ -225,7 +225,7 @@ function Navbar({ visible = false, light = false, isScrolled = false, onNavigate
       {/* Drawer Panel Menu (Morphing rounded-l liquid entry animation) */}
       <div
         data-drawer-menu
-        className={`fixed right-0 top-0 bottom-0 z-101 h-screen w-full max-w-95 ${drawerPanelClass} border-l shadow-2xl p-10 flex flex-col justify-between transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
+        className={`fixed right-0 top-0 bottom-0 z-101 h-dvh w-full max-w-95 ${drawerPanelClass} border-l shadow-2xl p-8 sm:p-10 flex flex-col justify-between transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
           isMenuOpen 
             ? 'translate-x-0 rounded-l-none' 
             : 'translate-x-full rounded-l-[150px] md:rounded-l-[200px]'

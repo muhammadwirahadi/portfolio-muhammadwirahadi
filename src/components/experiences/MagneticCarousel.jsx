@@ -215,6 +215,69 @@ function TechIcon({ name }) {
   )
 }
 
+// Isi detail kartu info (role, judul, deskripsi, link, teknologi). Dipakai di
+// mode desktop (saat kartu dibuka) dan di mode kompak/HP (selalu tampil).
+// `fill` = tinggi mengikuti kartu (desktop); tanpa `fill` = tinggi mengikuti
+// isi sehingga bisa di-scroll di dalam kartu kecil.
+function InfoDetails({ img, fill = false }) {
+  return (
+    <div className={`flex flex-col justify-between w-full ${fill ? "h-full" : "min-h-full gap-5"}`}>
+      <div>
+        <p className="text-xs font-mono uppercase tracking-[0.25em] text-[#D4AF37] mb-1">
+          {img.role}
+        </p>
+        <h4 className={`${fill ? "text-2xl md:text-3xl mb-4" : "text-xl mb-3"} font-bold font-sans tracking-tight`}>
+          {img.title}
+        </h4>
+        <p className={`text-sm leading-relaxed text-cream/80 max-w-lg font-sans ${fill ? "mb-6" : "mb-4"}`}>
+          {img.description}
+        </p>
+
+        {/* Link ke website project (opsional) - hanya muncul kalau data punya field link */}
+        {img.link && (
+          <a
+            href={img.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            // stopPropagation: biar klik link tidak ikut menutup kartu / modal
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-2 mb-2 px-4 py-2 rounded-full border border-[#D4AF37] text-[#D4AF37] text-xs font-mono uppercase tracking-[0.2em] transition-colors duration-300 hover:bg-[#D4AF37] hover:text-[#4A1620] active:bg-[#D4AF37] active:text-[#4A1620]"
+            style={{ cursor: "none" }}
+          >
+            Visit Website
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 17L17 7M8 7h9v9"/>
+            </svg>
+          </a>
+        )}
+      </div>
+
+      <div>
+        <p className="text-xs font-mono uppercase tracking-[0.25em] text-[#D4AF37] mb-3">
+          Technologies Used
+        </p>
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          {img.tech.map((t, idx) => (
+            <div
+              key={idx}
+              className="flex items-center gap-1.5 bg-cream/10 border border-cream/15 px-3 py-1.5 rounded-full text-xs font-medium font-mono"
+            >
+              <TechIcon name={t} />
+              <span>{t}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Di bawah lebar ini (lebar area carousel, bukan lebar layar), deretan kartu
+// desktop tidak muat - 6 kartu x 120px + celah sudah ~790px, dan kartu yang
+// dibuka melebar sampai 750px. Di bawah batas ini carousel berubah jadi
+// deretan kartu yang digeser (swipe) dengan snap.
+const COMPACT_BREAKPOINT = 900
+
 export default function MagneticCarousel({
   images = [],
   collapsedWidth = 120, // Diperlebar agar rasio landscape (screenshot web) lebih pas
@@ -241,6 +304,25 @@ export default function MagneticCarousel({
   const curRef = useRef(Array(count).fill(0))
   const loopRef = useRef(0)
   const closeTimer = useRef(0)
+
+  // Lebar area carousel, diukur langsung supaya mode kompak mengikuti ukuran
+  // sebenarnya (bukan tebakan dari lebar layar).
+  const [containerWidth, setContainerWidth] = useState(() =>
+    typeof window === "undefined" ? 1152 : Math.min(window.innerWidth - 48, 1152)
+  )
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || typeof ResizeObserver === "undefined") return
+    // Pakai lebar border-box (bukan contentRect): mode kompak memakai padding
+    // inline, dan contentRect yang mengecil karenanya akan membuat kartu terus
+    // menyusut (umpan balik tak berujung).
+    const observer = new ResizeObserver(([entry]) => {
+      setContainerWidth(Math.round(entry.target.getBoundingClientRect().width))
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     targetRef.current = Array(count).fill(0)
@@ -333,6 +415,68 @@ export default function MagneticCarousel({
   const openEase = `width ${dur}s ${ease}, height ${dur}s ${ease}, filter ${dur}s ${ease}, opacity ${dur}s ${ease}`
   const barTransition = open !== null || closing ? openEase : "none"
 
+  // MODE KOMPAK (HP & tablet): kartu berjajar horizontal, digeser dengan swipe.
+  // Kartu info langsung menampilkan detail lengkapnya (bisa di-scroll di dalam
+  // kartu), jadi tidak butuh interaksi hover/klik-untuk-buka seperti desktop.
+  if (containerWidth < COMPACT_BREAKPOINT) {
+    const cardWidth = Math.min(Math.round(containerWidth * 0.86), 520)
+    const infoHeight = Math.min(openSizeHeight, 420)
+    const imageHeight = Math.min(infoHeight, Math.round(cardWidth * 0.66))
+
+    return (
+      <div
+        ref={containerRef}
+        data-lenis-prevent
+        style={{
+          ...style,
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          overflowX: "auto",
+          overflowY: "hidden",
+          scrollSnapType: "x mandatory",
+          overscrollBehaviorX: "contain",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          paddingInline: `calc((100% - ${cardWidth}px) / 2)`,
+          boxSizing: "border-box",
+        }}
+      >
+        {images.map((img, i) => {
+          const isInfoCard = img.isInfo
+          return (
+            <div
+              key={i}
+              data-carousel-card
+              className="shadow-xl relative select-none"
+              style={{
+                flex: "none",
+                width: cardWidth,
+                height: isInfoCard ? infoHeight : imageHeight,
+                scrollSnapAlign: "center",
+                overflow: "hidden",
+                borderRadius: 14,
+                backgroundColor: isInfoCard ? "#4A1620" : "#121212",
+                backgroundImage: !isInfoCard && img.src ? `url(${img.src})` : undefined,
+                backgroundSize: "cover",
+                backgroundPosition: img.bgPos || "center",
+                backgroundRepeat: "no-repeat",
+              }}
+            >
+              {isInfoCard && (
+                <div data-lenis-prevent className="absolute inset-0 overflow-y-auto p-5 text-cream box-border">
+                  <InfoDetails img={img} />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div
       ref={containerRef}
@@ -404,54 +548,7 @@ export default function MagneticCarousel({
               <div className="absolute inset-0 p-6 flex flex-col justify-between text-cream h-full w-full box-border select-text">
                 {open === i ? (
                   // State Terbuka (Detail penjelasan)
-                  <div className="flex flex-col justify-between h-full w-full">
-                    <div>
-                      <p className="text-xs font-mono uppercase tracking-[0.25em] text-[#D4AF37] mb-1">
-                        {img.role}
-                      </p>
-                      <h4 className="text-2xl md:text-3xl font-bold mb-4 font-sans tracking-tight">
-                        {img.title}
-                      </h4>
-                      <p className="text-sm leading-relaxed text-cream/80 max-w-lg mb-6 font-sans">
-                        {img.description}
-                      </p>
-
-                      {/* Link ke website project (opsional) - hanya muncul kalau data punya field link */}
-                      {img.link && (
-                        <a
-                          href={img.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          // stopPropagation: biar klik link tidak ikut menutup kartu / modal
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-2 mb-2 px-4 py-2 rounded-full border border-[#D4AF37] text-[#D4AF37] text-xs font-mono uppercase tracking-[0.2em] transition-colors duration-300 hover:bg-[#D4AF37] hover:text-[#4A1620]"
-                          style={{ cursor: "none" }}
-                        >
-                          Visit Website
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M7 17L17 7M8 7h9v9"/>
-                          </svg>
-                        </a>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-mono uppercase tracking-[0.25em] text-[#D4AF37] mb-3">
-                        Technologies Used
-                      </p>
-                      <div className="flex flex-wrap gap-3">
-                        {img.tech.map((t, idx) => (
-                          <div 
-                            key={idx} 
-                            className="flex items-center gap-1.5 bg-cream/10 border border-cream/15 px-3 py-1.5 rounded-full text-xs font-medium font-mono"
-                          >
-                            <TechIcon name={t} />
-                            <span>{t}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <InfoDetails img={img} fill />
                 ) : (
                   // State Tertutup (Hanya Judul tegak atau teks padat)
                   <div className="flex flex-col justify-center items-center h-full w-full text-center">

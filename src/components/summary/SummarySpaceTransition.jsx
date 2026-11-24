@@ -319,6 +319,10 @@ function SummarySpaceTransition({ active = false, onBack, setNavbarVisible, setL
       if (e.touches.length > 0) {
         const touchEndY = e.touches[0].clientY
         const deltaY = touchStartY - touchEndY
+        // Hitung selisih per-gerakan (bukan kumulatif dari awal sentuhan). Kalau
+        // kumulatif, tiap touchmove di ujung konten menambah jarak yang makin
+        // besar sehingga scroll halaman "loncat" makin jauh di HP.
+        touchStartY = touchEndY
         const { scrollTop, scrollHeight, clientHeight } = el
         const maxScroll = scrollHeight - clientHeight
 
@@ -373,12 +377,12 @@ function SummarySpaceTransition({ active = false, onBack, setNavbarVisible, setL
     <section 
       ref={containerRef} 
       id="summary"
-      className="relative z-30 h-screen w-screen overflow-hidden bg-maroon -mt-px"
+      className="relative z-30 h-svh w-screen overflow-hidden bg-maroon -mt-px"
     >
       <style>{`
         #summary {
           top: -2px !important;
-          height: calc(100vh + 4px) !important;
+          height: calc(100svh + 4px) !important;
         }
       `}</style>
       {/* Background Sparkles Particles */}

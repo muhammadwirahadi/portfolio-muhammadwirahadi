@@ -131,6 +131,12 @@ const PROJECTS_DATA = [
   },
 ]
 
+// Skala awal judul "EXPERIENCES" (yang di-zoom dari ukuran 24px). Dibatasi
+// sesuai lebar layar, selaras dengan ukuran font di KineticTextGrid, supaya
+// judulnya tidak lebih lebar dari layar di HP/tablet.
+const getTitleStartScale = () =>
+  Math.min(window.innerWidth < 768 ? 1.33 : 3.33, (window.innerWidth * 0.065) / 24)
+
 function Experiences({ active = false, setNavbarVisible, onNextJourney, showNextJourneyCue = true }) {
   const containerRef = useRef(null)
   
@@ -182,7 +188,7 @@ function Experiences({ active = false, setNavbarVisible, onNextJourney, showNext
           yPercent: -50,
           x: 0,
           y: 0,
-          scale: window.innerWidth < 768 ? 1.33 : 3.33,
+          scale: getTitleStartScale(),
           fontSize: window.innerWidth < 768 ? '24px' : '24px',
           fontWeight: 700,
           letterSpacing: '0.35em',
@@ -228,7 +234,7 @@ function Experiences({ active = false, setNavbarVisible, onNextJourney, showNext
       yPercent: -50,
       x: 0,
       y: 0,
-      scale: window.innerWidth < 768 ? 1.33 : 3.33,
+      scale: getTitleStartScale(),
       fontSize: window.innerWidth < 768 ? '24px' : '24px',
       fontWeight: 700,
       letterSpacing: '0.35em',
@@ -299,7 +305,7 @@ function Experiences({ active = false, setNavbarVisible, onNextJourney, showNext
       
       tl.to(titleRef.current, {
         left: finalLeft,
-        top: '22vh',
+        top: '22svh',
         xPercent: 0,
         yPercent: 0,
         scale: 1,
@@ -346,7 +352,7 @@ function Experiences({ active = false, setNavbarVisible, onNextJourney, showNext
     <div ref={containerRef} className="w-full bg-cream text-[#4A1620] relative overflow-x-hidden">
       
       {/* Halaman 1: Experiences (Mengisi 1 layar penuh min-h-screen) */}
-      <div className="min-h-screen relative w-full pt-[28vh] pb-24">
+      <div className="min-h-svh relative w-full pt-[28svh] pb-24">
         {/* Teks Judul Experiences */}
         <p
           ref={titleRef}
@@ -368,7 +374,7 @@ function Experiences({ active = false, setNavbarVisible, onNextJourney, showNext
           style={{
             left: finalLeft,
             width: window.innerWidth - 2 * finalLeft,
-            top: 'calc(22vh + 40px)',
+            top: 'calc(22svh + 40px)',
             transformOrigin: 'left center',
           }}
         />
@@ -382,7 +388,7 @@ function Experiences({ active = false, setNavbarVisible, onNextJourney, showNext
       {/* Halaman 2: Projects (Mengisi 1 layar penuh berikutnya min-h-screen) */}
       <div 
         ref={projectsSectionRef} 
-        className="min-h-screen flex flex-col justify-center relative w-full py-24 opacity-0"
+        className="min-h-svh flex flex-col justify-center relative w-full py-20 md:py-24 opacity-0"
       >
         <div className="max-w-6xl w-full mx-auto px-6">
           

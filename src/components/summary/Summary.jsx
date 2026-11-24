@@ -87,11 +87,11 @@ function Summary({ active = false, setNavbarVisible, scrollerRef, onNextJourney 
   return (
     <div ref={containerRef} className="w-full bg-cream text-[#4A1620] relative overflow-x-hidden">
       {/* Halaman 1: Summary Content (min-h-screen, diringkas biar muat 1 layar) */}
-      <div className="min-h-screen flex flex-col justify-center relative w-full py-20">
+      <div className="min-h-svh flex flex-col justify-center relative w-full py-24 md:py-20">
         {/* Header Section */}
         <div className="max-w-6xl w-full mx-auto px-6 relative">
           <div ref={titleRef} className="opacity-0">
-            <h2 className="font-display text-4xl md:text-5xl font-bold uppercase tracking-wider text-[#4A1620]">
+            <h2 className="font-display text-2xl md:text-3xl font-bold uppercase tracking-wider text-[#4A1620]">
               Summary
             </h2>
           </div>
@@ -104,11 +104,11 @@ function Summary({ active = false, setNavbarVisible, scrollerRef, onNextJourney 
         {/* Content Section */}
         <div
           ref={contentRef}
-          className="max-w-6xl w-full mx-auto px-6 mt-12 grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 opacity-0"
+          className="max-w-6xl w-full mx-auto px-6 mt-8 md:mt-12 grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-14 opacity-0"
         >
           {/* Kolom kiri: narasi ringkas + CTA Download CV */}
           <div className="md:col-span-7 flex flex-col gap-8">
-            <p className="text-lg md:text-xl text-justify font-light leading-relaxed text-[#4A1620] tracking-wide">
+            <p className="text-base sm:text-lg md:text-xl text-left sm:text-justify font-light leading-relaxed text-[#4A1620] tracking-wide">
               Full Stack Developer berbasis di Jakarta, lulusan Informatika
               Universitas Bina Sarana Informatika. Enam bulan pengalaman
               hands-on membangun sistem pendaftaran magang untuk instansi
@@ -118,7 +118,7 @@ function Summary({ active = false, setNavbarVisible, scrollerRef, onNextJourney 
             </p>
 
             {/* Strip statistik ringkas - kesan "kena" tanpa perlu baca panjang */}
-            <div className="flex flex-wrap gap-8">
+            <div className="flex flex-wrap gap-x-8 gap-y-5">
               {STATS.map((stat) => (
                 <div key={stat.label}>
                   <p className="font-display text-3xl font-bold text-[#4A1620]">
@@ -141,7 +141,7 @@ function Summary({ active = false, setNavbarVisible, scrollerRef, onNextJourney 
               download="cv-muhammad-wira-hadi.pdf"
               onMouseEnter={handleCtaEnter}
               onMouseLeave={handleCtaLeave}
-              className="group inline-flex w-fit items-center gap-3 rounded-full bg-[#4A1620] px-7 py-3.5 text-sm uppercase tracking-[0.2em] text-[#F0E4C8] transition-colors duration-300 hover:bg-[#D4AF37] hover:text-[#4A1620]"
+              className="group inline-flex w-fit items-center gap-3 rounded-full bg-[#4A1620] px-7 py-3.5 text-sm uppercase tracking-[0.2em] text-[#F0E4C8] transition-colors duration-300 hover:bg-[#D4AF37] hover:text-[#4A1620] active:bg-[#D4AF37] active:text-[#4A1620]"
             >
               Download CV
               <svg

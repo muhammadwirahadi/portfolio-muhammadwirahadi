@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { motion, useMotionValue, useSpring } from "framer-motion"
 
 const DEFAULT_TRANSITION = {
@@ -25,6 +25,25 @@ export default function HoverImageReveal({
 }) {
   const containerRef = useRef(null)
   const [hovered, setHovered] = useState(null)
+
+  // Efek hover (gambar mengikuti kursor, teks lain meredup) hanya masuk akal di
+  // perangkat dengan mouse. Di layar sentuh, 'hover' palsu setelah tap malah
+  // bikin gambar besar menutupi teks dan baris lain terus meredup.
+  const [canHover] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches
+  )
+
+  // Di bawah lg, kolom nama (55% lebar) terlalu sempit untuk nama perusahaan
+  // yang panjang, jadi izinkan teks turun ke baris berikutnya.
+  const [wrapCompany, setWrapCompany] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches
+  )
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)")
+    const onChange = (e) => setWrapCompany(e.matches)
+    mq.addEventListener("change", onChange)
+    return () => mq.removeEventListener("change", onChange)
+  }, [])
 
   const rawX = useMotionValue(0)
   const rawY = useMotionValue(0)
@@ -60,6 +79,7 @@ export default function HoverImageReveal({
           position: "absolute",
           top: 0,
           left: 0,
+          display: canHover ? "block" : "none",
           x,
           y,
           translateX: "-50%",
@@ -142,14 +162,16 @@ export default function HoverImageReveal({
             fontWeight: 700,
             textTransform: "none",
             transition: "color 0.25s ease-out",
-            whiteSpace: "nowrap",
+            whiteSpace: wrapCompany ? "normal" : "nowrap",
+            // Ukuran font mengikuti lebar layar: 20px di HP kecil, 36px di desktop
+            fontSize: "clamp(1.25rem, 4.2vw, 2.25rem)",
             lineHeight: 1.3,
           }
 
           return (
             <div
               key={i}
-              onMouseEnter={() => setHovered(i)}
+              onMouseEnter={() => canHover && setHovered(i)}
               onClick={(e) => onItemClick?.(item, i, { x: e.clientX, y: e.clientY })}
               className="cursor-pointer"
               data-cursor-text={cursorText}
@@ -227,6 +249,11 @@ export default function HoverImageReveal({
                   <span>{item.role}</span>
                   <span className="opacity-40">•</span>
                   <span className="font-mono">{item.period}</span>
+                  {onItemClick && (
+                    <span className="ml-auto text-[10px] uppercase tracking-[0.2em] opacity-70">
+                      Tap to view &rarr;
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

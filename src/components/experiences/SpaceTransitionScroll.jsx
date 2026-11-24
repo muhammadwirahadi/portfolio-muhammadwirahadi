@@ -256,12 +256,12 @@ function SpaceTransitionScroll({ active = false, onBack, setNavbarVisible, setLi
       <section
         ref={containerRef}
         id="experiences"
-        className="relative z-30 h-screen w-screen overflow-hidden bg-maroon"
+        className="relative z-30 h-svh w-screen overflow-hidden bg-maroon"
       >
         <style>{`
           #experiences {
             top: -2px !important;
-            height: calc(100vh + 4px) !important;
+            height: calc(100svh + 4px) !important;
           }
         `}</style>
         <Sparkles className="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-60" active={sparklesActive} />
@@ -361,7 +361,7 @@ function SpaceTransitionScroll({ active = false, onBack, setNavbarVisible, setLi
 
       {/* Section konten Experiences sesungguhnya - NORMAL FLOW, mengikuti
           scroll utama halaman (bukan lagi di dalam kontainer yang di-pin). */}
-      <div ref={experiencesWrapRef} id="experiences-content" className="relative z-30 opacity-0 -mt-[100vh]">
+      <div ref={experiencesWrapRef} id="experiences-content" className="relative z-30 opacity-0 -mt-[100svh]">
         <Experiences active={isExperiencesActive} onBack={onBack} setNavbarVisible={setNavbarVisible} onNextJourney={onNextJourney} showNextJourneyCue={showNextJourneyCue} />
 
         <ScrollCue visible={showScrollCue} light={true} disableScrollTrigger={true} />

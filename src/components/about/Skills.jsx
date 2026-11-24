@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import InteractiveGrid from './InteractiveGrid'
@@ -43,6 +43,19 @@ function Skills({ active = false }) {
   const lineRef = useRef(null)
   const gridWrapRef = useRef(null)
 
+  // Di layar sempit (HP), grid 6 kolom bikin tiap kartu cuma ~55px sehingga logo
+  // nyaris tak terlihat. Di sana grid diputar jadi 3 kolom x 6 baris.
+  const [isNarrow, setIsNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const onChange = (e) => setIsNarrow(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
   useEffect(() => {
     if (!active) return
 
@@ -82,7 +95,7 @@ function Skills({ active = false }) {
         scale: 1,
         duration: 0.8,
         stagger: {
-          grid: [3, 6],
+          grid: isNarrow ? [6, 3] : [3, 6],
           from: 'center',
           amount: 0.6
         },
@@ -104,13 +117,13 @@ function Skills({ active = false }) {
     }, sectionRef)
 
     return () => context.revert()
-  }, [active])
+  }, [active, isNarrow])
 
   return (
     <section
       ref={sectionRef}
       id="skills"
-      className="relative z-20 flex min-h-screen flex-col justify-center overflow-hidden bg-transparent py-24 text-maroon"
+      className="relative z-20 flex min-h-svh flex-col justify-center overflow-hidden bg-transparent py-20 text-maroon md:py-24"
     >
       <div className="relative z-10 mx-auto w-full max-w-6xl px-6">
         {/* Label Seksi - Mengikuti struktur dan alignment Education */}
@@ -130,12 +143,12 @@ function Skills({ active = false }) {
         {/* Konten Grid Interaktif 3D (Columns: 6, Rows: 3, aspect-square, max-w-4xl hampir sejajar dengan garis) */}
         <div 
           ref={gridWrapRef} 
-          className="pt-16 w-full max-w-4xl mx-auto"
+          className="pt-10 md:pt-16 w-full max-w-4xl mx-auto"
         >
           <InteractiveGrid
             images={SKILL_ICONS}
-            columns={6}
-            rows={3}
+            columns={isNarrow ? 3 : 6}
+            rows={isNarrow ? 6 : 3}
             gap={0}
             rounded={12}
             padding="0px"

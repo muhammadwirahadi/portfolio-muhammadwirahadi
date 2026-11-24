@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
@@ -87,7 +87,7 @@ function Education({ active = false }) {
     <section
       ref={sectionRef}
       id="education"
-      className="relative z-20 flex min-h-screen flex-col justify-center overflow-hidden bg-transparent py-24 text-maroon"
+      className="relative z-20 flex min-h-svh flex-col justify-center overflow-hidden bg-transparent py-20 text-maroon md:py-24"
     >
       <div className="relative z-10 mx-auto w-full max-w-6xl px-6">
         {/* Label Seksi */}
@@ -110,28 +110,38 @@ function Education({ active = false }) {
           <div>
             <h3
               ref={univRef}
-              className="text-3xl font-bold tracking-tight text-maroon md:text-4xl"
+              className="text-2xl font-bold tracking-tight text-maroon sm:text-3xl md:text-4xl"
             >
-              {"Universitas Bina Sarana Informatika".split("").map((char, index) => (
+              {/* Dipecah per KATA (bukan per huruf + spasi non-breaking) supaya nama
+                  panjang ini bisa turun ke baris berikutnya di layar HP, bukan
+                  melebar keluar layar dan terpotong. */}
+              {"Universitas Bina Sarana Informatika".split(" ").map((word, wordIndex, words) => (
+                <Fragment key={wordIndex}>
+                  <span className="inline-block whitespace-nowrap">
+                    {word.split("").map((char, index) => (
                 <span
                   key={index}
                   className="char inline-block"
                 >
                   {char === " " ? "\u00A0" : char}
                 </span>
+                    ))}
+                  </span>
+                  {wordIndex < words.length - 1 && " "}
+                </Fragment>
               ))}
             </h3>
             
             <p
               ref={degreeRef}
-              className="mt-2 text-base uppercase tracking-[0.15em] text-maroon/70 font-medium"
+              className="mt-2 text-sm uppercase tracking-[0.15em] text-maroon/70 font-medium sm:text-base"
             >
               Bachelor of Informatics
             </p>
             
             <p
               ref={detailsRef}
-              className="mt-1 text-sm uppercase tracking-widest text-maroon/50 font-medium"
+              className="mt-1 text-xs uppercase tracking-wider text-maroon/50 font-medium sm:text-sm sm:tracking-widest"
             >
               Jakarta, Indonesia • 2022 - 2026 • IPK 3.96
             </p>

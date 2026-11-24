@@ -5,6 +5,16 @@ import CrystalGlow from './CrystalGlow'
 import RotatingText from './RotatingText'
 import LiquidHover from './LiquidHover'
 
+// Ukuran foto profil menyesuaikan tinggi layar (svh) supaya semua konten About
+// selalu muat dalam 1 layar di HP/tablet, tanpa terpotong atau bertabrakan
+// dengan navbar & petunjuk scroll. Tiap varian dibatasi rentangnya (max-lg)
+// supaya tidak saling menimpa dengan ukuran desktop (lg).
+const AVATAR_SIZE =
+  'h-[min(20rem,25svh)] w-[min(18rem,calc(25svh*0.9))] ' +
+  'sm:max-lg:portrait:h-[min(26rem,34svh)] sm:max-lg:portrait:w-[min(23.4rem,calc(34svh*0.9))] ' +
+  'max-lg:landscape:h-[min(20rem,60svh)] max-lg:landscape:w-[min(18rem,calc(60svh*0.9))] ' +
+  'lg:h-104 lg:w-88'
+
 // `play` dikontrol dari App.jsx (state `lightTheme`, dua arah) - true begitu
 // proses zoom scroll di Hero sampai ke About, balik ke false lagi kalau user
 // scroll mundur ke Hero. Effect di bawah bereaksi ke DUA arah perubahan itu:
@@ -72,11 +82,11 @@ function About({ play = false, onAnimationComplete }) {
 
   return (
     <div className="relative h-full w-full">
-      <div className="relative z-10 mx-auto flex h-full w-full max-w-6xl flex-col items-center justify-between gap-6 px-6 text-center md:flex-row md:text-left">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-6xl flex-col items-center justify-center gap-5 px-6 pb-20 pt-[4.5rem] text-center sm:gap-8 max-lg:landscape:flex-row max-lg:landscape:justify-between max-lg:landscape:gap-6 max-lg:landscape:py-14 max-lg:landscape:text-left lg:flex-row lg:justify-between lg:gap-6 lg:py-0 lg:text-left">
         <div className="max-w-xl">
           <p 
             ref={eyebrowRef} 
-            className="text-sm uppercase tracking-[0.3em] text-maroon/70"
+            className="text-xs uppercase tracking-[0.2em] text-maroon/70 sm:text-sm sm:tracking-[0.3em]"
             style={{ willChange: 'transform, opacity' }}
           >
              About Me • Jakarta • Indonesia
@@ -84,7 +94,7 @@ function About({ play = false, onAnimationComplete }) {
 
           <h2
             ref={nameRef}
-            className="mt-3 font-script text-5xl text-maroon md:text-6xl"
+            className="mt-3 font-script text-[clamp(1.9rem,9.5vw,3rem)] text-maroon lg:text-6xl"
             style={{ willChange: 'transform, opacity' }}
           >
             <CrystalGlow
@@ -97,7 +107,7 @@ function About({ play = false, onAnimationComplete }) {
 
           <div
             ref={roleRef}
-            className="mt-2 flex flex-wrap items-center justify-center gap-x-2 text-base uppercase tracking-[0.2em] text-maroon/70 md:justify-start"
+            className="mt-2 flex flex-wrap items-center justify-center gap-x-2 text-sm uppercase tracking-[0.15em] text-maroon/70 sm:text-base sm:tracking-[0.2em] max-lg:landscape:justify-start lg:justify-start"
             style={{ willChange: 'transform, opacity' }}
           >I'm a
             <RotatingText
@@ -115,7 +125,7 @@ function About({ play = false, onAnimationComplete }) {
 
           <p 
             ref={bioRef} 
-            className="mt-4 text-base text-justify leading-relaxed text-maroon/80"
+            className="mt-3 text-sm text-center leading-relaxed text-maroon/80 sm:mt-4 sm:text-base max-lg:landscape:text-left lg:text-justify"
             style={{ willChange: 'transform, opacity' }}
           >
             Welcome to my profile. I'm Muhammad Wira Hadi, a Full Stack Developer based in Jakarta, Indonesia, with six months of internship experience in web development. As a fresh graduate, I'm open to job opportunities and collaborations as a Frontend, Backend, or Full Stack Developer.
@@ -134,7 +144,7 @@ function About({ play = false, onAnimationComplete }) {
           />
           
           {/* Wrapper utama dengan ukuran sesuai awal */}
-          <div className="relative flex h-80 w-72 items-end justify-center md:h-104 md:w-88">
+          <div className={`relative flex items-end justify-center ${AVATAR_SIZE}`}>
             
             {/* SVG ClipPath untuk efek 3D Pop-Out */}
             <svg width="0" height="0" className="absolute">
@@ -150,8 +160,8 @@ function About({ play = false, onAnimationComplete }) {
 
             {/* Container Liquid Hover Canvas dengan clip path */}
             <div
-              className="absolute bottom-0 left-1/2 h-80 w-72 -translate-x-1/2 overflow-visible cursor-pointer md:h-104 md:w-88"
-              style={{ clipPath: 'url(#avatarClip)' }}
+              className={`absolute bottom-0 left-1/2 -translate-x-1/2 overflow-visible cursor-pointer ${AVATAR_SIZE}`}
+              style={{ clipPath: 'url(#avatarClip)', touchAction: 'pan-y' }}
             >
               <LiquidHover
                 imageSrc={profilePhoto}

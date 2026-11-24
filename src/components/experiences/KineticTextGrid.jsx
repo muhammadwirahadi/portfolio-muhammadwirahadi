@@ -18,7 +18,9 @@ export default function KineticTextGrid({
 
   useEffect(() => {
     const handleResize = () => {
-      setFontSize(window.innerWidth < 768 ? 32 : 80)
+      // Sebanding dengan lebar layar (maks 80px di desktop) supaya kata
+      // "EXPERIENCES" yang membesar saat zoom tidak melebihi lebar HP/tablet.
+      setFontSize(Math.min(80, Math.round(window.innerWidth * 0.065)))
     }
     handleResize()
     window.addEventListener("resize", handleResize)

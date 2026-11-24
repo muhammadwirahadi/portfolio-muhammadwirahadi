@@ -46,6 +46,28 @@ html {
   }
 }
 
+/* Perilaku khusus layar sentuh (HP & tablet) */
+html {
+  /* Cegah browser menyesuaikan ukuran teks sendiri saat HP diputar (landscape) */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Matikan efek tarik-untuk-refresh & bounce: halaman ini punya banyak
+     section yang di-pin, jadi bounce bikin posisi scroll terasa melompat. */
+  overscroll-behavior-y: none;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: none), (pointer: coarse) {
+  a,
+  button,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
 /* Lenis Smooth Scroll Configuration */
 html.lenis, html.lenis body {
   height: auto;

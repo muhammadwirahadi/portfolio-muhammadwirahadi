@@ -56,7 +56,7 @@ function Contact({ active = false, setNavbarVisible, onBackToHome }) {
 
   return (
     <div ref={containerRef} className="w-full bg-cream text-[#4A1620] relative overflow-x-hidden">
-      <div className="min-h-screen flex flex-col justify-center relative w-full py-20">
+      <div className="min-h-svh flex flex-col justify-center relative w-full py-20">
         
         {/* Main Grid */}
         <div className="max-w-6xl w-full mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
@@ -79,7 +79,7 @@ function Contact({ active = false, setNavbarVisible, onBackToHome }) {
               <img 
                 src={contactIllustration} 
                 alt="Contact Illustration" 
-                className="max-h-[300px] md:max-h-[380px] w-auto object-contain select-none pointer-events-none"
+                className="max-h-[220px] sm:max-h-[300px] md:max-h-[380px] max-w-full w-auto object-contain select-none pointer-events-none"
               />
             </div>
           </div>
@@ -127,8 +127,9 @@ function Contact({ active = false, setNavbarVisible, onBackToHome }) {
               </div>
 
               {/* Dynamic Email Hover Info (Fixed Height to Prevent Layout Shift) */}
-              <div className="h-6 flex items-center">
-                <span className={`text-xs font-mono tracking-wider text-[#4A1620]/80 transition-all duration-300 ${
+              <div className="min-h-6 flex items-center">
+                {/* Di layar sentuh tidak ada hover, jadi alamat email selalu ditampilkan. */}
+                <span className={`text-xs font-mono tracking-wider text-[#4A1620]/80 break-all transition-all duration-300 [@media(hover:none)]:opacity-100 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:pointer-events-auto ${
                   hoveredEmail ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1 pointer-events-none'
                 }`}>
                   muhammadwirahadi2@gmail.com
@@ -137,10 +138,10 @@ function Contact({ active = false, setNavbarVisible, onBackToHome }) {
             </div>
 
             {/* Tombol Back Home */}
-            <div className="mt-8 border-t border-[#4A1620]/10 pt-6">
+            <div className="mt-4 md:mt-8 border-t border-[#4A1620]/10 pt-6">
               <button
                 onClick={onBackToHome}
-                className="group inline-flex items-center gap-3 rounded-full bg-[#4A1620] px-8 py-3.5 text-xs uppercase tracking-[0.2em] text-[#F0E4C8] transition-all duration-300 hover:bg-[#D4AF37] hover:text-[#4A1620]"
+                className="group inline-flex items-center gap-3 rounded-full bg-[#4A1620] px-8 py-3.5 text-xs uppercase tracking-[0.2em] text-[#F0E4C8] transition-all duration-300 hover:bg-[#D4AF37] hover:text-[#4A1620] active:bg-[#D4AF37] active:text-[#4A1620]"
               >
                 <span>Retrace Journey</span>
                 <svg 

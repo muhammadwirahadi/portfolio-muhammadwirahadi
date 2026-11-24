@@ -3,6 +3,16 @@ import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import MagneticCarousel from './MagneticCarousel'
 
+// Tinggi area carousel di dalam modal. Di HP, ruang yang dipakai elemen lain
+// sedikit lebih kecil (padding atas lebih tipis) tapi batas minimumnya juga
+// lebih rendah supaya tetap muat di layar pendek (mis. iPhone SE).
+function computeCarouselHeight() {
+  const isPhone = window.innerWidth < 768
+  const reserved = isPhone ? 290 : 300
+  const minHeight = isPhone ? 240 : 300
+  return Math.max(minHeight, Math.min(460, window.innerHeight - reserved))
+}
+
 // Modal detail project. Alur animasi masuk (dibuat berurutan supaya terasa
 // "terungkap", bukan muncul tiba-tiba):
 //   1. Layar krem mekar melingkar dari titik yang diklik user
@@ -20,16 +30,36 @@ function ProjectModal({ project, origin, onClose }) {
   // (header, carousel, petunjuk di bawah) selalu muat dalam 1 layar tanpa scroll.
   // 300px = perkiraan total tinggi elemen lain (padding atas untuk navbar,
   // header, petunjuk, padding bawah). Dibatasi 300-460px.
-  const [carouselHeight, setCarouselHeight] = useState(() =>
-    Math.max(300, Math.min(460, window.innerHeight - 300))
-  )
+  const [carouselHeight, setCarouselHeight] = useState(computeCarouselHeight)
+
+  // Mode kompak (HP/tablet): carousel berupa kartu yang digeser. Batasnya sama
+  // dengan COMPACT_BREAKPOINT di MagneticCarousel (lebar area carousel < 900px,
+  // yaitu lebar layar dikurangi padding 48px).
+  const [isCompact, setIsCompact] = useState(() => window.innerWidth - 48 < 900)
 
   useEffect(() => {
     const handleResize = () => {
-      setCarouselHeight(Math.max(300, Math.min(460, window.innerHeight - 300)))
+      setCarouselHeight(computeCarouselHeight())
+      setIsCompact(window.innerWidth - 48 < 900)
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Kunci scroll halaman di belakang modal. Di HP, tanpa ini menggeser jari di
+  // modal ikut menggulir halaman di baliknya.
+  useEffect(() => {
+    const lenis = window.globalLenis
+    const prevBodyOverflow = document.body.style.overflow
+    const prevHtmlOverflow = document.documentElement.style.overflow
+    lenis?.stop()
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevBodyOverflow
+      document.documentElement.style.overflow = prevHtmlOverflow
+      lenis?.start()
+    }
   }, [])
 
   // Titik pusat lingkaran: posisi klik user, fallback ke tengah layar
@@ -137,20 +167,20 @@ function ProjectModal({ project, origin, onClose }) {
       ref={overlayRef}
       // pt-28: sisakan ruang untuk navbar (logo & hamburger tetap tampil di atas modal).
       // Tidak ada scroll: tinggi carousel yang menyesuaikan layar (lihat carouselHeight).
-      className="fixed inset-0 bg-[#F8F1DC]/97 z-[999] backdrop-blur-md flex flex-col items-center justify-center overflow-hidden px-6 pt-28 pb-6"
+      className="fixed inset-0 bg-[#F8F1DC]/97 z-[999] backdrop-blur-md flex flex-col items-center justify-center overflow-hidden overscroll-contain px-4 sm:px-6 pt-24 md:pt-28 pb-4 md:pb-6"
       onClick={handleClose}
       onWheel={(e) => e.stopPropagation()}
       onTouchMove={(e) => e.stopPropagation()}
     >
       <div ref={contentRef} className="w-full max-w-6xl flex flex-col items-center">
         {/* Header: judul project (mask reveal) + role + garis pembatas */}
-        {/* mt-14 di mobile: turun sedikit supaya tidak bertabrakan dengan tombol tutup di kanan atas */}
-        <div className="w-full max-w-4xl mb-6 mt-14 md:mt-0 text-center" onClick={(e) => e.stopPropagation()}>
+        {/* px-12 di mobile: sisakan ruang di kanan supaya judul tidak menabrak tombol tutup */}
+        <div className="w-full max-w-4xl mb-5 md:mb-6 px-12 md:px-0 text-center" onClick={(e) => e.stopPropagation()}>
           <p className="pm-role text-xs font-mono uppercase tracking-[0.25em] text-[#4A1620]/60 mb-2">
             {project.role}
           </p>
           <div className="overflow-hidden">
-            <h3 className="pm-title-inner text-2xl md:text-4xl font-bold tracking-tight text-[#4A1620] font-sans leading-tight pb-1">
+            <h3 className="pm-title-inner text-xl sm:text-2xl md:text-4xl font-bold tracking-tight text-[#4A1620] font-sans leading-tight pb-1">
               {project.title}
             </h3>
           </div>
@@ -172,21 +202,23 @@ function ProjectModal({ project, origin, onClose }) {
 
         {/* Instruksi Pengguna */}
         <div className="pm-fade-last">
-          <p className="mt-4 text-xs font-mono uppercase tracking-[0.2em] text-[#4A1620]/60 select-none animate-pulse">
-            Click cards to expand/collapse • Click outside or button to close
+          <p className="mt-3 md:mt-4 px-4 text-center text-[10px] md:text-xs font-mono uppercase tracking-[0.15em] md:tracking-[0.2em] text-[#4A1620]/60 select-none animate-pulse">
+            {isCompact
+              ? 'Swipe to browse • Tap × to close'
+              : 'Click cards to expand/collapse • Click outside or button to close'}
           </p>
         </div>
       </div>
 
       {/* Tombol Tutup Silang di Kanan Atas (sejajar dengan batas konten/hamburger menu) */}
-      <div className="pm-fade-last absolute top-28 left-0 right-0 max-w-6xl w-full mx-auto px-6 pointer-events-none z-50">
+      <div className="pm-fade-last absolute top-[5.5rem] md:top-28 left-0 right-0 max-w-6xl w-full mx-auto px-4 sm:px-6 pointer-events-none z-50">
         <motion.div
           onClick={(e) => {
             e.stopPropagation()
             handleClose()
           }}
           role="button"
-          className="absolute right-6 top-0 text-[#4A1620] cursor-pointer font-bold text-2xl flex items-center justify-center h-12 w-12 border border-[#4A1620]/25 rounded-full select-none pointer-events-auto"
+          className="absolute right-4 sm:right-6 top-0 text-[#4A1620] cursor-pointer font-bold text-2xl flex items-center justify-center h-11 w-11 md:h-12 md:w-12 border border-[#4A1620]/25 rounded-full select-none pointer-events-auto"
           style={{ zIndex: 10000, cursor: 'none' }}
           whileHover={{
             scale: 1.1,
