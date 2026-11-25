@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import Lenis from 'lenis'
 import Sparkles from '../hero/Sparkles'
 import ScrollCue from '../hero/ScrollCue'
 import Summary from './Summary'
@@ -24,27 +23,35 @@ const LINES = [
 const SPARKLE_PATH =
   'M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z'
 
+// CATATAN ARSITEKTUR: dulu konten Summary dirender DI DALAM section yang di-pin,
+// dengan container overflow-y-auto + instance Lenis kedua + handler wheel/touch
+// manual untuk "mengoper" scroll ke halaman utama. Itu bikin dua sistem
+// smooth-scroll berjalan bersamaan (tiap frame dua kali raf + dua kali
+// ScrollTrigger.update), dan terasa berat saat scroll di Summary.
+//
+// Sekarang disamakan dengan Experiences & Contact: section pin ini CUMA berisi
+// animasi zoom sinematiknya. Konten Summary dirender sebagai section terpisah
+// SETELAHNYA (alur normal halaman), sehingga hanya ada SATU sistem scroll
+// (Lenis global).
 function SummarySpaceTransition({ active = false, onBack, setNavbarVisible, setLightTheme, setNavbarScrolled, setShowShootingStars, onNextJourney }) {
   const containerRef = useRef(null)
   const heroPanRef = useRef(null)
   const heroVisualsRef = useRef(null)
   const topOverlayRef = useRef(null)
+  // Wrapper konten Summary sesungguhnya (di luar section pin)
   const summaryRef = useRef(null)
-  
+
   const [sparklesActive, setSparklesActive] = useState(true)
   const [showScrollCue, setShowScrollCue] = useState(false)
   const [isSummaryActive, setIsSummaryActive] = useState(false)
   const scrollTriggerRef = useRef(null)
-  const lenisSummaryRef = useRef(null)
 
   useEffect(() => {
     if (!active) return
 
-    let context;
-    console.log('SummarySpaceTransition: useEffect mounted (active=true)')
+    let context
     const timer = setTimeout(() => {
       if (!heroVisualsRef.current || !heroPanRef.current || !topOverlayRef.current || !summaryRef.current) {
-        console.log('SummarySpaceTransition: refs check failed, returning early')
         return
       }
 
@@ -93,12 +100,12 @@ function SummarySpaceTransition({ active = false, onBack, setNavbarVisible, setL
           y: hamalDeltaY,
         })
         gsap.set(topOverlayRef.current, { opacity: 1 })
-        gsap.set(summaryRef.current, { opacity: 0, pointerEvents: 'none' })
-        
+        gsap.set(summaryRef.current, { opacity: 0 })
+
         // Garis neon penghubung (Hamal -> Sheratan) - panjang 184px (dasharray 200/dashoffset 200)
         gsap.set('.glow-path-line-summary', { strokeDashoffset: 200 })
 
-        // Buat ScrollTrigger Timeline
+        // Buat ScrollTrigger Timeline - HANYA untuk animasi zoom sinematiknya.
         const tl = gsap.timeline({
           scrollTrigger: {
             trigger: containerRef.current,
@@ -109,7 +116,6 @@ function SummarySpaceTransition({ active = false, onBack, setNavbarVisible, setL
             pinSpacing: true,
             onUpdate: (self) => {
               scrollTriggerRef.current = self
-              setIsSummaryActive(self.progress >= 0.90)
 
               // Tampilkan navbar pada awal (saat meninggalkan Experiences) dan akhir (Summary)
               if (self.progress <= 0.05) {
@@ -128,28 +134,37 @@ function SummarySpaceTransition({ active = false, onBack, setNavbarVisible, setL
               }
 
               // Pemicu shooting stars
-              if (self.progress <= 0.05) {
-                setShowShootingStars?.(true)
-              } else {
-                setShowShootingStars?.(false)
-              }
+              setShowShootingStars?.(self.progress <= 0.05)
 
               // Sparkles active
-              if (self.progress >= 0.90) {
-                setSparklesActive(false)
-              } else {
-                setSparklesActive(true)
-              }
+              setSparklesActive(self.progress < 0.90)
 
-              // Scroll cue & scrolled navbar state
+              // Scroll cue & scrolled navbar state. Begitu pin dilepas, perubahan
+              // ini diambil alih ScrollTrigger milik konten Summary (lihat di bawah).
               if (self.progress >= 0.90) {
-                const scrollTop = summaryRef.current?.scrollTop || 0
-                setNavbarScrolled?.(scrollTop > 15)
-                setShowScrollCue?.(scrollTop <= 15)
+                setNavbarScrolled?.(false)
+                setShowScrollCue?.(true)
               } else {
                 setNavbarScrolled?.(true)
                 setShowScrollCue?.(false)
               }
+            },
+            onLeave: () => {
+              // Pin baru BENERAN lepas di sini - konten Summary (di bawahnya,
+              // alur normal) sudah persis di posisi teratas layar. Baru di
+              // titik ini animasi masuknya boleh jalan.
+              setIsSummaryActive(true)
+              gsap.to(summaryRef.current, {
+                opacity: 1,
+                duration: 0.5,
+                ease: 'power2.out',
+              })
+            },
+            onEnterBack: () => {
+              // Scroll balik ke atas (masuk lagi ke area pin) - reset supaya
+              // animasi masuk Summary bisa terulang lagi nanti.
+              setIsSummaryActive(false)
+              gsap.set(summaryRef.current, { opacity: 0 })
             },
             onLeaveBack: () => {
               setIsSummaryActive(false)
@@ -196,7 +211,8 @@ function SummarySpaceTransition({ active = false, onBack, setNavbarVisible, setL
           duration: 0.35,
         }, 0.25)
 
-        // STAGE 3: Zoom-in tajam ke Sheratan & memudarkan Summary masuk
+        // STAGE 3: Zoom-in tajam ke Sheratan. Munculnya konten Summary TIDAK
+        // lagi lewat scrub di sini - itu jalan lewat onLeave di atas.
         .fromTo(heroVisualsRef.current, {
           scale: travelScale,
         }, {
@@ -213,12 +229,6 @@ function SummarySpaceTransition({ active = false, onBack, setNavbarVisible, setL
           ease: 'power2.inOut',
           duration: 0.40,
         }, 0.60)
-        .to(summaryRef.current, {
-          opacity: 1,
-          pointerEvents: 'auto',
-          ease: 'power2.inOut',
-          duration: 0.25,
-        }, 0.75)
 
         ScrollTrigger.refresh()
       }, containerRef)
@@ -230,293 +240,174 @@ function SummarySpaceTransition({ active = false, onBack, setNavbarVisible, setL
     }
   }, [active])
 
-  // 1. Inisialisasi Lenis khusus seksi Summary ketika aktif
+  // Toggle navbar "scrolled" & ScrollCue berdasarkan posisi scroll WINDOW
+  // relatif ke konten Summary (sama seperti pola di Experiences).
   useEffect(() => {
-    const el = summaryRef.current
-    if (!el || !isSummaryActive) return
+    if (!isSummaryActive) return
 
-    const lenisSummary = new Lenis({
-      wrapper: el,
-      content: el.firstElementChild || el,
-      duration: 1.6,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      wheelMultiplier: 0.85,
+    const trigger = ScrollTrigger.create({
+      trigger: summaryRef.current,
+      start: 'top+=15 top',
+      onEnter: () => {
+        setNavbarScrolled?.(true)
+        setShowScrollCue?.(false)
+      },
+      onLeaveBack: () => {
+        setNavbarScrolled?.(false)
+        setShowScrollCue?.(true)
+      },
     })
 
-    lenisSummaryRef.current = lenisSummary
-    lenisSummary.on('scroll', ScrollTrigger.update)
-
-    const tickerCallback = (time) => {
-      lenisSummary.raf(time * 1000)
-    }
-    gsap.ticker.add(tickerCallback)
-
-    return () => {
-      gsap.ticker.remove(tickerCallback)
-      lenisSummary.destroy()
-      lenisSummaryRef.current = null
-    }
-  }, [isSummaryActive])
-
-  // 2. Handle event propagation untuk wheel/touch events inside Summary container
-  // agar window scroller (Lenis global) dilewati ketika sedang berada di dalam Summary.
-  useEffect(() => {
-    const el = summaryRef.current
-    if (!el) return
-
-    const handleWheel = (e) => {
-      const st = scrollTriggerRef.current
-      const progress = st ? st.progress : 0
-      if (progress < 0.95) return
-
-      const { scrollTop, scrollHeight, clientHeight } = el
-      const maxScroll = scrollHeight - clientHeight
-
-      if (e.deltaY > 0) {
-        // Scrolling down
-        if (scrollTop < maxScroll - 15) {
-          lenisSummaryRef.current?.start()
-          e.stopPropagation()
-        } else {
-          // Jika sudah mencapai dasar, matikan Lenis lokal, gulirkan window secara manual, dan stop event lokal
-          lenisSummaryRef.current?.stop()
-          if (window.globalLenis) {
-            window.globalLenis.scrollTo(window.globalLenis.scroll + e.deltaY)
-          }
-          e.stopPropagation()
-          e.preventDefault()
-        }
-      } else if (e.deltaY < 0) {
-        // Scrolling up
-        if (scrollTop > 15) {
-          lenisSummaryRef.current?.start()
-          e.stopPropagation()
-        } else {
-          // Jika sudah mencapai paling atas, matikan Lenis lokal, gulirkan window secara manual ke atas
-          lenisSummaryRef.current?.stop()
-          if (window.globalLenis) {
-            window.globalLenis.scrollTo(window.globalLenis.scroll + e.deltaY)
-          }
-          e.stopPropagation()
-          e.preventDefault()
-        }
-      }
-    }
-
-    let touchStartY = 0
-    const handleTouchStart = (e) => {
-      if (e.touches.length > 0) {
-        touchStartY = e.touches[0].clientY
-      }
-    }
-
-    const handleTouchMove = (e) => {
-      const st = scrollTriggerRef.current
-      const progress = st ? st.progress : 0
-      if (progress < 0.95) return
-
-      if (e.touches.length > 0) {
-        const touchEndY = e.touches[0].clientY
-        const deltaY = touchStartY - touchEndY
-        // Hitung selisih per-gerakan (bukan kumulatif dari awal sentuhan). Kalau
-        // kumulatif, tiap touchmove di ujung konten menambah jarak yang makin
-        // besar sehingga scroll halaman "loncat" makin jauh di HP.
-        touchStartY = touchEndY
-        const { scrollTop, scrollHeight, clientHeight } = el
-        const maxScroll = scrollHeight - clientHeight
-
-        if (deltaY > 0) {
-          // Swiping up (scrolling down)
-          if (scrollTop < maxScroll - 15) {
-            lenisSummaryRef.current?.start()
-            e.stopPropagation()
-          } else {
-            lenisSummaryRef.current?.stop()
-            if (window.globalLenis) {
-              window.globalLenis.scrollTo(window.globalLenis.scroll + deltaY)
-            }
-            e.stopPropagation()
-            e.preventDefault()
-          }
-        } else if (deltaY < 0) {
-          // Swiping down (scrolling up)
-          if (scrollTop > 15) {
-            lenisSummaryRef.current?.start()
-            e.stopPropagation()
-          } else {
-            lenisSummaryRef.current?.stop()
-            if (window.globalLenis) {
-              window.globalLenis.scrollTo(window.globalLenis.scroll + deltaY)
-            }
-            e.stopPropagation()
-            e.preventDefault()
-          }
-        }
-      }
-    }
-
-    el.addEventListener('wheel', handleWheel, { passive: false })
-    el.addEventListener('touchstart', handleTouchStart, { passive: true })
-    el.addEventListener('touchmove', handleTouchMove, { passive: false })
-
-    return () => {
-      el.removeEventListener('wheel', handleWheel)
-      el.removeEventListener('touchstart', handleTouchStart)
-      el.removeEventListener('touchmove', handleTouchMove)
-    }
-  }, [])
-
-  const handleSummaryScroll = (e) => {
-    const scrollTop = e.currentTarget.scrollTop
-    setNavbarScrolled?.(scrollTop > 15)
-    setShowScrollCue?.(scrollTop <= 15)
-  }
+    return () => trigger.kill()
+  }, [isSummaryActive, setNavbarScrolled])
 
   return (
-    <section 
-      ref={containerRef} 
-      id="summary"
-      className="relative z-30 h-svh w-screen overflow-hidden bg-maroon -mt-px"
-    >
-      <style>{`
-        #summary {
-          top: -2px !important;
-          height: calc(100svh + 4px) !important;
-        }
-      `}</style>
-      {/* Background Sparkles Particles */}
-      <Sparkles className="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-60" active={sparklesActive} />
+    <>
+      <section
+        ref={containerRef}
+        id="summary"
+        className="relative z-30 h-screen w-screen overflow-hidden bg-maroon -mt-px"
+      >
+        {/* Sengaja pakai vh (bukan svh): section ini harus menutup SELURUH layar
+            HP, termasuk area yang ditempati address bar saat menciut. Kalau
+            lebih pendek, strip di bawahnya memperlihatkan latar krem di belakang. */}
+        <style>{`
+          #summary {
+            top: -2px !important;
+            height: calc(100vh + 4px) !important;
+          }
+        `}</style>
+        {/* Background Sparkles Particles */}
+        <Sparkles className="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-60" active={sparklesActive} />
 
-      {/* Peta Rasi Bintang */}
-      <div ref={heroPanRef} className="absolute -top-px left-0 w-full h-[calc(100%+2px)] pointer-events-none z-10">
-        <div ref={heroVisualsRef} className="absolute inset-0 h-full w-full">
-          <svg 
-            viewBox="0 0 1600 900" 
-            className="h-full w-full" 
-            preserveAspectRatio="xMidYMid slice"
-          >
-            <defs>
-              <radialGradient id="transStarGlowScrollSummary" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#F8F1DC" stopOpacity="0.85" />
-                <stop offset="35%" stopColor="#D4AF37" stopOpacity="0.32" />
-                <stop offset="100%" stopColor="#D4AF37" stopOpacity="0" />
-              </radialGradient>
-            </defs>
+        {/* Peta Rasi Bintang */}
+        <div ref={heroPanRef} className="absolute -top-px left-0 w-full h-[calc(100%+2px)] pointer-events-none z-10">
+          <div ref={heroVisualsRef} className="absolute inset-0 h-full w-full">
+            <svg
+              viewBox="0 0 1600 900"
+              className="h-full w-full"
+              preserveAspectRatio="xMidYMid slice"
+            >
+              <defs>
+                <radialGradient id="transStarGlowScrollSummary" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#F8F1DC" stopOpacity="0.85" />
+                  <stop offset="35%" stopColor="#D4AF37" stopOpacity="0.32" />
+                  <stop offset="100%" stopColor="#D4AF37" stopOpacity="0" />
+                </radialGradient>
+              </defs>
 
-            {/* Rasi Bintang Aries Lines */}
-            {LINES.map((line, idx) => (
+              {/* Rasi Bintang Aries Lines */}
+              {LINES.map((line, idx) => (
+                <line
+                  key={idx}
+                  x1={line.from.x}
+                  y1={line.from.y}
+                  x2={line.to.x}
+                  y2={line.to.y}
+                  stroke="#D4AF37"
+                  strokeWidth="1.4"
+                  strokeOpacity="0.4"
+                  strokeLinecap="round"
+                />
+              ))}
+
+              {/* Neon Draw Line (Hamal <-> Sheratan) - panjang 184px (dasharray 200/dashoffset 200) */}
               <line
-                key={idx}
-                x1={line.from.x}
-                y1={line.from.y}
-                x2={line.to.x}
-                y2={line.to.y}
+                className="glow-path-line-summary"
+                x1="765"
+                y1="440"
+                x2="925"
+                y2="530"
                 stroke="#D4AF37"
-                strokeWidth="1.4"
-                strokeOpacity="0.4"
+                strokeWidth="1.8"
                 strokeLinecap="round"
+                strokeDasharray="200"
+                strokeDashoffset="200"
               />
-            ))}
 
-            {/* Neon Draw Line (Hamal <-> Sheratan) - panjang 184px (dasharray 200/dashoffset 200) */}
-            <line
-              className="glow-path-line-summary"
-              x1="765"
-              y1="440"
-              x2="925"
-              y2="530"
-              stroke="#D4AF37"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeDasharray="200"
-              strokeDashoffset="200"
-            />
-
-            {/* Bintang-bintang Rasi */}
-            {STARS.map((star) => {
-              const isSheratan = star.id === 'sheratan'
-              const size = star.radius * (isSheratan ? 6.5 : 5)
-              const scale = size / 24
-              return (
-                <g key={star.id} data-star-id={star.id}>
-                  {/* Halo Glow */}
-                  <circle
-                    cx={star.cx}
-                    cy={star.cy}
-                    r={star.radius * 6.5}
-                    fill="url(#transStarGlowScrollSummary)"
-                  />
-                  
-                  {/* Teks Label Bintang */}
-                  <g className="pointer-events-none">
-                    <text
-                      x={star.cx}
-                      y={star.cy - (size / 2 + 16)}
-                      textAnchor="middle"
-                      fontFamily="Archivo, sans-serif"
-                      fontSize="14"
-                      fontWeight="600"
-                      letterSpacing="0.4"
-                      stroke="#4A1620"
-                      strokeWidth="3"
-                      strokeLinejoin="round"
-                      fill="none"
-                    >
-                      {star.label}
-                    </text>
-                    <text
-                      x={star.cx}
-                      y={star.cy - (size / 2 + 16)}
-                      textAnchor="middle"
-                      fontFamily="Archivo, sans-serif"
-                      fontSize="14"
-                      fontWeight="600"
-                      letterSpacing="0.4"
-                      fill="#F8F1DC"
-                    >
-                      {star.label}
-                    </text>
-                  </g>
-
-                  {/* Sparkle Icon (Matches Experiences/About star icon shapes) */}
-                  <g transform={`translate(${star.cx}, ${star.cy})`} data-star-icon>
-                    <path
-                      d={SPARKLE_PATH}
-                      fill={isSheratan ? '#F8F1DC' : '#F0E4C8'}
-                      transform={`scale(${scale}) translate(-12, -12)`}
+              {/* Bintang-bintang Rasi */}
+              {STARS.map((star) => {
+                const isSheratan = star.id === 'sheratan'
+                const size = star.radius * (isSheratan ? 6.5 : 5)
+                const scale = size / 24
+                return (
+                  <g key={star.id} data-star-id={star.id}>
+                    {/* Halo Glow */}
+                    <circle
+                      cx={star.cx}
+                      cy={star.cy}
+                      r={star.radius * 6.5}
+                      fill="url(#transStarGlowScrollSummary)"
                     />
+
+                    {/* Teks Label Bintang */}
+                    <g className="pointer-events-none">
+                      <text
+                        x={star.cx}
+                        y={star.cy - (size / 2 + 16)}
+                        textAnchor="middle"
+                        fontFamily="Archivo, sans-serif"
+                        fontSize="14"
+                        fontWeight="600"
+                        letterSpacing="0.4"
+                        stroke="#4A1620"
+                        strokeWidth="3"
+                        strokeLinejoin="round"
+                        fill="none"
+                      >
+                        {star.label}
+                      </text>
+                      <text
+                        x={star.cx}
+                        y={star.cy - (size / 2 + 16)}
+                        textAnchor="middle"
+                        fontFamily="Archivo, sans-serif"
+                        fontSize="14"
+                        fontWeight="600"
+                        letterSpacing="0.4"
+                        fill="#F8F1DC"
+                      >
+                        {star.label}
+                      </text>
+                    </g>
+
+                    {/* Sparkle Icon (Matches Experiences/About star icon shapes) */}
+                    <g transform={`translate(${star.cx}, ${star.cy})`} data-star-icon>
+                      <path
+                        d={SPARKLE_PATH}
+                        fill={isSheratan ? '#F8F1DC' : '#F0E4C8'}
+                        transform={`scale(${scale}) translate(-12, -12)`}
+                      />
+                    </g>
                   </g>
-                </g>
-              )
-            })}
-          </svg>
+                )
+              })}
+            </svg>
+          </div>
+        </div>
+
+        {/* Top Cream Color Transition Overlay */}
+        <div
+          ref={topOverlayRef}
+          className="pointer-events-none absolute inset-0 z-20 bg-cream"
+        />
+      </section>
+
+      {/* Konten Summary sesungguhnya - ALUR NORMAL halaman, mengikuti scroll
+          utama (bukan lagi di dalam container yang di-pin). */}
+      <div ref={summaryRef} id="summary-content" className="relative z-30 opacity-0 -mt-[100vh]">
+        <Summary
+          active={isSummaryActive}
+          setNavbarVisible={setNavbarVisible}
+          onNextJourney={onNextJourney}
+        />
+
+        {/* Petunjuk scroll di dasar layar pertama Summary */}
+        <div className="pointer-events-none absolute left-0 top-0 h-svh w-full">
+          <ScrollCue visible={showScrollCue} light={true} disableScrollTrigger={true} />
         </div>
       </div>
-
-      {/* Top Cream Color Transition Overlay */}
-      <div 
-        ref={topOverlayRef} 
-        className="pointer-events-none absolute inset-0 z-20 bg-cream"
-      />
-
-      {/* Summary Page Content */}
-      <div 
-        ref={summaryRef} 
-        onScroll={handleSummaryScroll}
-        className="pointer-events-none absolute inset-0 z-30 opacity-0 overflow-y-auto"
-      >
-        <Summary 
-          active={isSummaryActive} 
-          onBack={onBack} 
-          setNavbarVisible={setNavbarVisible} 
-          scrollerRef={summaryRef} 
-          onNextJourney={onNextJourney} 
-        />
-        
-        <ScrollCue visible={showScrollCue} light={true} disableScrollTrigger={true} />
-      </div>
-    </section>
+    </>
   )
 }
 

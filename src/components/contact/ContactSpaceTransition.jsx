@@ -195,12 +195,12 @@ function ContactSpaceTransition({ active = false, onBack, setNavbarVisible, setL
       <section
         ref={containerRef}
         id="contact"
-        className="relative z-30 h-svh w-screen overflow-hidden bg-maroon"
+        className="relative z-30 h-screen w-screen overflow-hidden bg-maroon"
       >
         <style>{`
           #contact {
             top: -2px !important;
-            height: calc(100svh + 4px) !important;
+            height: calc(100vh + 4px) !important;
           }
         `}</style>
 
@@ -300,7 +300,7 @@ function ContactSpaceTransition({ active = false, onBack, setNavbarVisible, setL
       </section>
 
       {/* Section konten Contact sesungguhnya - NORMAL FLOW */}
-      <div ref={contactWrapRef} id="contact-content" className="relative z-30 opacity-0 -mt-[100svh]">
+      <div ref={contactWrapRef} id="contact-content" className="relative z-30 opacity-0 -mt-[100vh]">
         <Contact active={isContactActive} onBack={onBack} setNavbarVisible={setNavbarVisible} onBackToHome={handleBackToHome} />
       </div>
     </>

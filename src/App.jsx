@@ -132,13 +132,10 @@ function App() {
     const sectionST = getPinScrollTrigger(target)
     if (!sectionST) return null
 
-    // Summary hidup DI DALAM section yang di-pin, jadi tujuannya tepat di ujung
-    // pin (progress ~1). Experiences & Contact kontennya ada SETELAH pin, jadi
-    // tujuannya sedikit melewati ujung pin agar onLeave (yang memicu animasi
-    // masuk konten) pasti terpanggil.
-    return target === 'summary'
-      ? Math.round(sectionST.end) - 2
-      : Math.round(sectionST.end) + 2
+    // Konten Experiences, Summary & Contact semuanya ada SETELAH section pin,
+    // jadi tujuannya sedikit melewati ujung pin agar onLeave (yang memicu
+    // animasi masuk konten) pasti terpanggil.
+    return Math.round(sectionST.end) + 2
   }
 
   // Navigasi dari Navbar / hamburger menu: fade overlay -> teleport scroll ->
