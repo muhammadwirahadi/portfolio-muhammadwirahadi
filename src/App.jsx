@@ -23,9 +23,24 @@ gsap.registerPlugin(ScrollTrigger)
 // membuat section yang di-pin terlihat melompat.
 ScrollTrigger.config({ ignoreMobileResize: true })
 
+// Default GSAP memakai transform 3D (translate3d) selama animasi, yang membuat
+// browser mengangkat elemen jadi layer GPU terpisah dan merasterisasinya pada
+// ukuran awal. Saat rasi bintang di-zoom sampai 330x, hasilnya cuma bitmap kecil
+// yang diperbesar (buram), terutama di Safari iOS & layar DPR tinggi. Dengan
+// transform 2D, vektor SVG digambar ulang di ukuran sebenarnya (tajam).
+gsap.config({ force3D: false })
+
 // Bintang yang jadi target zoom - harus cocok dengan salah satu id di
 // ARIES_STARS pada Constellation.jsx.
 const ZOOM_TARGET_STAR_ID = '41-ari'
+
+// Posisi scroll tempat About "terkunci" sampai animasi masuknya selesai (80%
+// dari panjang pin Hero). Sengaja dibulatkan KE ATAS (+1px): kalau dibulatkan
+// ke bawah, di layar dengan tinggi pecahan (iPhone, zoom browser 110%/125%,
+// monitor tertentu) posisi kunci jatuh sedikit di bawah ambang progress 0.80.
+// Akibatnya scroll terkunci tapi animasi About tidak pernah diputar, jadi
+// tidak pernah selesai dan scroll macet selamanya (layar krem kosong).
+const getAboutLockScroll = (start, end) => Math.ceil(start + (end - start) * 0.80) + 1
 
 function App() {
   // Navbar & info scroll sengaja disembunyikan di awal - baru muncul
@@ -126,7 +141,7 @@ function App() {
       // Titik 80% Hero = zoom selesai & About sudah tampil penuh (sama dengan titik kunci scroll)
       const heroST = scrollTriggerRef.current
       if (!heroST) return null
-      return Math.round(heroST.start + (heroST.end - heroST.start) * 0.80)
+      return getAboutLockScroll(heroST.start, heroST.end)
     }
 
     const sectionST = getPinScrollTrigger(target)
@@ -243,7 +258,7 @@ function App() {
     const getLockScroll = () => {
       const st = scrollTriggerRef.current
       if (!st) return 0
-      return Math.round(st.start + (st.end - st.start) * 0.80)
+      return getAboutLockScroll(st.start, st.end)
     }
 
     const handleWheel = (e) => {
@@ -387,7 +402,7 @@ function App() {
               if (!aboutAnimCompleted.current) {
                 isLockedDown.current = true
 
-                const lockScroll = Math.round(self.start + (self.end - self.start) * 0.80)
+                const lockScroll = getAboutLockScroll(self.start, self.end)
                 if (Math.abs(self.scroll() - lockScroll) > 2) {
                   if (lenisRef.current) {
                     lenisRef.current.scrollTo(lockScroll, { immediate: true })

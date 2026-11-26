@@ -225,6 +225,13 @@ function Constellation({ className = '', onIntroComplete }) {
         if (window.scrollY > 0) {
           if (!isScrollingRef.current) {
             isScrollingRef.current = true
+            // Di layar sentuh, tap pada bintang memicu efek hover (filter brightness)
+            // yang tidak pernah dilepas karena tidak ada "mouse leave". Filter yang
+            // masih menempel membuat bintang dirasterisasi jadi bitmap sehingga
+            // buram saat di-zoom. Bersihkan sebelum zoom dimulai.
+            const icons = root.querySelectorAll('[data-star-icon]')
+            gsap.killTweensOf(icons)
+            gsap.set(icons, { scale: 1, clearProps: 'filter' })
             twinkleTweensRef.current.forEach((tween) => tween.pause())
             gsap.to(constellationStars, { opacity: 1, duration: 0.25, overwrite: 'auto' })
             starHitAreas.forEach((hit) => {
